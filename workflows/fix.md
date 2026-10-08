@@ -119,9 +119,22 @@ it if it defines the wording), PR-text check (8), and a grep for other places re
 the same string. Anything touching a condition, handler, state, visibility or payload
 gets the full round. When in doubt, it is not copy-only.
 
-Attack the *claim*, not the diff:
-1. Restate as a falsifiable sentence in the reporter's terms: "On <screen>, doing
-   <action> now produces <expected> instead of <reported>." Can't → back to Step 5.
+**The full round runs in `fix-reviewer` (deep subagent), not inline**, so its probes,
+screenshots and re-greps never ride along in this session. The reduced copy-only round
+stays inline. Before dispatch, the main agent:
+- restates the claim as a falsifiable sentence in the reporter's terms: "On <screen>,
+  doing <action> now produces <expected> instead of <reported>" (can't → back to Step 5);
+- **hands over the pre-fix control**: the evidence already captured that reproduces the
+  symptom (Step 4 runtime gate, the analyze repro, or a run made before editing). A
+  subagent in the shared working tree cannot stash the fix to re-create it. If none
+  exists, create a read-only pre-fix checkout under `_work/worktrees/<ID>-prefix/`
+  (`git worktree add --detach`) and pass its path;
+- passes: the claim, item record + trail path, changed files (`git diff --name-only`),
+  the evidence dir `_work/evidence/<ID>/`, the repo context files, the quiet commands,
+  `docs/verification-guide.md`, and the attack list below.
+
+The reviewer attacks the *claim*, not the diff:
+1. The falsifiable restatement holds (or is corrected).
 2. **Paired A/B, pre-fix control first**, same record / instance / input path. The
    control must reproduce the symptom, or the post-fix pass is vacuous.
 3. **Assert every trial executed** (request in log, row written, handler entered).
@@ -131,10 +144,17 @@ Attack the *claim*, not the diff:
 6. Re-run the sweep from the **defect's defining relation**, with a control.
 7. Audit revived paths and removed writes (Step 6) once more.
 8. Verify every mechanism sentence in the PR body / commit message against a line
-   read this session; re-verify every file:line.
-9. Dispatch `fix-verifier` for cross-layer changes; **REJECTED blocks the push**.
-10. Write the evidence artifact (below). A round reporting "no findings" must name
-    what it tried to break. Every finding → fixed now / new task / reviewer note.
+   read in the review; re-verify every file:line.
+9. Write the evidence artifact (below). A round reporting "no findings" must name
+   what it tried to break, with proof each attack executed.
+
+It returns `ACCEPTED | REJECTED | NEEDS DEVELOPER`, the attacks table, findings with a
+proposed disposition, and the artifact path. Then the main agent:
+- **REJECTED blocks the push.** Fix, then re-dispatch; do not argue with the report.
+- **NEEDS DEVELOPER** items (a manual check, an environment the reviewer could not
+  reach) go to the top of *what I need from you*.
+- Dispatches `fix-verifier` for cross-layer changes after the reviewer returns;
+  **REJECTED blocks the push**. Every finding → fixed now / new task / reviewer note.
 
 Evidence artifact: `_work/evidence/<ID>/FIX-VERIFICATION-<YYYYMMDD>.md` +
 `<ID>-fix-verified-<YYYYMMDD>-<slug>.png` per distinct expected result, containing:

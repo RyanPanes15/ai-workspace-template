@@ -25,11 +25,11 @@ set effort once per session and expect a command's `effort:` to cost one re-read
 
 ## Session shapes
 
-Set at turn 1, after `/clear`, in both directions — `/clear` is not documented to
-reset the model, so a triage session after a deep one needs `/model sonnet` too.
-`/model` saves to user settings unless applied with `s`; the project `settings.json`
-`model` outranks that saved value at the next startup (settings precedence: project
-above user), so a leak is within one CLI process only.
+Set at launch: `claude --model opus --effort high` (deep) or `claude --model sonnet
+--effort medium` (triage). Both flags are session-only and save nothing. Inside a running
+process the fallback is `/clear` → `/model` → `/effort`, in both directions — `/clear` is
+not documented to reset the model. `/model` saves to user settings unless applied with
+`s`; the project `settings.json` `model` outranks that saved value at the next startup.
 
 | Shape | Model · effort | Units |
 | --- | --- | --- |
@@ -57,7 +57,7 @@ their writing to a light subagent, so the cheap tier is kept in either shape.
 | `/port-feature` | deep | high | silent rule omission is the failure mode |
 | `/area-loop` | deep | high | wraps analyze/fix; inherits their routing |
 | `/maintain-context` | deep | high | edits files that shape every future session |
-| `fix-verifier`, `completeness-verifier` | deep | high | the adversarial safety net |
+| `fix-reviewer`, `fix-verifier`, `completeness-verifier` | deep | high | the adversarial safety net; own context, so the probes never ride along in the main session |
 
 ## Stage-level dispatch
 
@@ -69,7 +69,9 @@ the main context:
   parallel read-only subagents at the **same** tier; report → `report-formatter`.
 - fix: anchor re-verification + edit specs → read-only subagents (standard);
   tests / lint / build runs → `test-runner` (light, failures + counts only);
-  cross-layer check → `fix-verifier` (deep); report → `report-formatter`; git/PR
+  full reviewer round → `fix-reviewer` (deep, returns verdict + attacks table + evidence
+  path; the reduced copy-only round stays inline); cross-layer check → `fix-verifier`
+  (deep, dispatched by the main agent after the reviewer returns); report → `report-formatter`; git/PR
   orchestration inline (tool calls, not reasoning).
 - port: pattern extraction + scaffolding → standard; inventory, logic drafting,
   verification → deep.

@@ -74,8 +74,9 @@ file changes.
 Set once per session, then leave it — every change to the front of the request
 re-reads the whole conversation at full price:
 
-- **Model and effort at turn 1**, right after `/clear` (`/model`, `/effort`). Pick the
-  session shape first (`CLAUDE.md` §Session shapes), then run the command.
+- **Model and effort at launch**: `claude --model opus --effort high` for a deep session,
+  `claude --model sonnet --effort medium` for triage (`CLAUDE.md` §Session shapes). Both
+  flags are session-only. Inside a running process: `/clear` → `/model` → `/effort`.
 - **`/clear` between tasks.** One long session carries every earlier task on each
   request. `/compact` before you step away or before a long review wait; `/compact`
   before `/model` if a switch is unavoidable.

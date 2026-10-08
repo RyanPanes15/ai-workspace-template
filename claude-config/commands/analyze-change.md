@@ -11,7 +11,8 @@ Arguments: `$ARGUMENTS`
 
 **Tier gate (deep).** If this session was not started as a deep session — the model
 you are running as is not opus-class (`CLAUDE.md` §Session shapes) — stop before any
-other step and ask the developer to `/clear`, `/model opus`, `/effort high`, then re-run.
+other step and ask the developer to start a deep session (`claude --model opus --effort high`,
+or `/clear`, `/model opus`, `/effort high` in a running process), then re-run.
 Never switch model mid-session yourself. Effort comes from this command's frontmatter.
 
 Read `workflows/change-request.md` and follow it exactly for the arguments above. Run **Part 1 — Analyze** only.

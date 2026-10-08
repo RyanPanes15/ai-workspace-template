@@ -16,7 +16,8 @@ playbooks and helper scripts, and is itself a small git repo.
 - This file is always loaded. Everything else is **read on demand** — don't preload.
 - Per-repo context lives in `context/repos/<name>.md` (and the repo's own
   `AGENTS.md`/`CLAUDE.md` if it has one). Read it **before** searching, editing, or
-  running git in that repo; cache it for the session.
+  running git in that repo; cache it for the session. (Tools with path-scoped rules get
+  a generated short form on file access; the full file is still the source.)
 - Workflows (`workflows/*.md`) are the step-by-step procedures. Open only the one
   you are running.
 - Playbooks (`docs/*.md`) are read when a workflow step points at them
