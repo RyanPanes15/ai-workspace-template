@@ -1,0 +1,160 @@
+{
+  "project": {
+    "name": "my-project",
+    "description": "one line",
+    "source_language": "English",
+    "stakeholder_language": "English",
+    "types": [
+      "port",
+      "feature"
+    ]
+  },
+  "repos": [
+    {
+      "name": "web",
+      "role": "frontend",
+      "remote": "git@github.com:org/web.git",
+      "path": "repos/web",
+      "policy": "editable",
+      "integration_branch": "develop",
+      "lint": {
+        "ext": [
+          ".ts",
+          ".tsx"
+        ],
+        "command": [
+          "npx",
+          "eslint",
+          "{files}",
+          "-f",
+          "checkstyle",
+          "-o",
+          "lint-result-diff.xml"
+        ],
+        "fix_command": [
+          "npx",
+          "eslint",
+          "--fix",
+          "{files}"
+        ],
+        "report": "lint-result-diff.xml",
+        "report_format": "checkstyle"
+      }
+    },
+    {
+      "name": "api",
+      "role": "backend",
+      "remote": "git@github.com:org/api.git",
+      "path": "repos/api",
+      "policy": "editable",
+      "integration_branch": "develop"
+    },
+    {
+      "name": "schema",
+      "role": "database",
+      "path": "repos/schema",
+      "policy": "read-only"
+    },
+    {
+      "name": "reports",
+      "role": "reports",
+      "path": "repos/reports",
+      "policy": "flag-only"
+    },
+    {
+      "name": "docs",
+      "role": "docs",
+      "path": "repos/docs",
+      "policy": "pr-only"
+    },
+    {
+      "name": "e2e",
+      "role": "tests",
+      "path": "repos/e2e",
+      "policy": "read-only"
+    },
+    {
+      "name": "legacy-client",
+      "role": "legacy-frontend",
+      "path": "D:/src/legacy-client",
+      "policy": "read-only"
+    }
+  ],
+  "git": {
+    "fix_branch": "fix/{area}/{item}",
+    "change_branch": "change/{area}/{item}",
+    "commit": "{area}: ({item}) {summary}",
+    "pr_title": "[{ITEM}] {summary}",
+    "push_namespaces": [
+      "fix",
+      "change",
+      "feature"
+    ]
+  },
+  "modules": {
+    "tracker": true,
+    "db_query": true,
+    "usage_metrics": false,
+    "log_triage": false,
+    "parity": false,
+    "pr_metrics": false
+  },
+  "tracker": {
+    "sources": [
+      {
+        "name": "bugs",
+        "type": "csv",
+        "location": "_work/exports/bugs.csv",
+        "id_prefix": "",
+        "id_field": "No",
+        "field_map": {
+          "area": "Screen ID",
+          "title": "Summary",
+          "phenomenon": "Description",
+          "category": "Category",
+          "status": "Status"
+        }
+      },
+      {
+        "name": "issues",
+        "type": "github",
+        "location": "org/web",
+        "id_prefix": "GH",
+        "labels": "bug"
+      }
+    ],
+    "enums": {
+      "category": {
+        "bug": "Fix",
+        "request": "Confirm scope first",
+        "as-designed": "Reply, no fix"
+      }
+    },
+    "translate_fields": [
+      "phenomenon",
+      "title"
+    ]
+  },
+  "export": {
+    "summary_languages": [
+      "en"
+    ]
+  },
+  "usage_metrics": {
+    "rates": {}
+  },
+  "area_index": {
+    "id_pattern": "(?P<id>[A-Z][a-z]{2}[CB]\\d{4})",
+    "normalize": "upper",
+    "call_pattern": "(?P<id>[A-Z][a-z]{2}B\\d{4})"
+  },
+  "log_triage": {
+    "event_start": "^\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}",
+    "error_filter": "ERROR|Error|Exception|FATAL|Uncaught|Traceback",
+    "code_pattern": "\\[([A-Z]{1,4}\\d{3,5})\\]",
+    "whitelist": "context/log-whitelist.json"
+  },
+  "pr_metrics": {
+    "ai_trailer_pattern": "Claude|noreply@anthropic\\.com"
+  }
+}

@@ -1,0 +1,4 @@
+{
+  // comment
+  "compilerOptions": { "baseUrl": "./src", "paths": { "@api/*": ["./api/*"], }, },
+}

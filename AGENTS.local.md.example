@@ -1,0 +1,11 @@
+# AGENTS.local.md — machine-local notes (copy to AGENTS.local.md; gitignored)
+
+Never quote anything from this file in PRs, commits, exports, or replies.
+Prefer an SSH agent / credential manager over storing secrets here.
+
+## Test accounts
+<!-- account id · role/permission group · which environment. The developer logs in;
+     the agent does not type passwords unless explicitly told to. -->
+
+## Local environment quirks
+<!-- ports, tunnels, which DB instance the local stack points at -->

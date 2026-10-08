@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{REPO_NAME}}</title>
+<script>
+  try { const t = localStorage.getItem("theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --border: #d1d9e0;
+    --code-bg: #f6f8fa; --accent: #0969da; --note-bg: #ddf4ff; --warn-bg: #fff8c5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --border: #3d444d;
+      --code-bg: #151b23; --accent: #4493f8; --note-bg: #0c2d6b; --warn-bg: #3b2e00;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --border: #3d444d;
+    --code-bg: #151b23; --accent: #4493f8; --note-bg: #0c2d6b; --warn-bg: #3b2e00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.6 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 2em; margin: 0 0 4px; }
+  h2 { border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-top: 48px; }
+  h3 { margin-top: 28px; }
+  a { color: var(--accent); }
+  code, pre { font-family: Consolas, "SF Mono", Menlo, monospace; font-size: 13px; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre.code { background: var(--code-bg); padding: 12px 14px; border-radius: 6px; overflow-x: auto; }
+  .tbl { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+  .lead { color: var(--muted); font-size: 1.05em; margin-top: 0; }
+  .note, .warn { padding: 10px 14px; border-radius: 6px; margin: 14px 0; }
+  .note { background: var(--note-bg); }
+  .warn { background: var(--warn-bg); }
+  nav.toc { background: var(--code-bg); border-radius: 6px; padding: 12px 18px; margin: 20px 0; }
+  nav.toc ol { margin: 4px 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+  .diagram { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin: 14px 0; position: relative; }
+  .diagram > summary { cursor: pointer; color: var(--muted); font-size: 13px; user-select: none; }
+  .diagram[open] > summary { margin-bottom: 8px; }
+  .viewport { display: flex; overflow: auto; cursor: grab; user-select: none; outline: none; }
+  .viewport:focus-visible { box-shadow: 0 0 0 2px var(--accent); border-radius: 4px; }
+  .viewport.panning { cursor: grabbing; }
+  .viewport > pre.mermaid { flex: none; margin: auto; }
+  .viewport svg { display: block; }
+  .zoombar { position: absolute; top: 6px; right: 10px; display: flex; gap: 4px; align-items: center; font-size: 12px; }
+  .zoombar button, .float-bar button {
+    font: inherit; color: var(--fg); background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 8px; cursor: pointer;
+  }
+  .zoombar button:hover, .float-bar button:hover { border-color: var(--accent); }
+  .zoombar .zl { min-width: 40px; text-align: center; color: var(--muted); }
+  .diagram:not([open]) > .zoombar { display: none; }
+  .float-bar { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .float-bar .icon { width: 36px; height: 36px; padding: 0; font-size: 18px; line-height: 1; }
+  .float-bar button { padding: 6px 12px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  #to-top[hidden] { display: none; }
+  pre.mermaid { background: transparent; margin: 0; }
+  .src { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<!--
+  Repo overview template — source of truth for the page shell (styles, theme, floating
+  buttons, zoomable diagrams). Filled by workflows/repo-overview.md.
+  Replace every {{...}} placeholder and every "fill:" comment; delete sections that do
+  not apply rather than leaving them empty. Write "Not yet defined" for unknowns.
+  For more diagrams, copy a whole details.diagram block from section 4 or 6.
+-->
+<div class="wrap">
+
+<h1>{{REPO_NAME}}</h1>
+<p class="lead">{{ONE_SENTENCE_PURPOSE}}</p>
+
+<div class="note">Generated from the repo and the workspace context on {{DATE}}. Regenerate with
+<code>/repo-overview {{REPO_NAME}}</code> after structural changes. Diagrams are rendered with Mermaid from a CDN,
+so they need an internet connection.<br>
+Diagram controls: click <em>Diagram</em> to minimize one; with the pointer over a diagram,
+<kbd>Ctrl</kbd>+scroll or <kbd>Ctrl</kbd> <kbd>+</kbd>/<kbd>-</kbd> zooms it and <kbd>Ctrl</kbd> <kbd>0</kbd> fits it; drag to pan.</div>
+
+<nav class="toc"><strong>Contents</strong>
+<ol>
+  <li><a href="#general">General details</a></li>
+  <li><a href="#scope">Project scope</a></li>
+  <li><a href="#stack">Tech stack</a></li>
+  <li><a href="#architecture">Architecture</a></li>
+  <li><a href="#structure">File structure</a></li>
+  <li><a href="#flows">Process flows</a></li>
+  <li><a href="#commands">Commands</a></li>
+  <li><a href="#config">Configuration &amp; environment</a></li>
+  <li><a href="#quality">Testing, quality &amp; CI</a></li>
+  <li><a href="#conventions">Conventions</a></li>
+  <li><a href="#related">Related repos &amp; ownership</a></li>
+  <li><a href="#decisions">Decisions &amp; references</a></li>
+</ol></nav>
+
+<h2 id="general">1. General details</h2>
+<div class="tbl"><table>
+<tr><th>Item</th><th>Value</th></tr>
+<tr><td>Repo</td><td><code>{{REPO_NAME}}</code></td></tr>
+<tr><td>Role in the project</td><td>{{ROLE}} <!-- fill: frontend / backend / database / docs / tests / infra / other --></td></tr>
+<tr><td>Remote</td><td>{{REMOTE}}</td></tr>
+<tr><td>Integration branch</td><td><code>{{INTEGRATION_BRANCH}}</code></td></tr>
+<tr><td>Status</td><td>{{STATUS}} <!-- fill: e.g. scaffolded, in development, released --></td></tr>
+<tr><td>Owners</td><td>{{OWNERS}}</td></tr>
+</table></div>
+
+<h2 id="scope">2. Project scope</h2>
+<!-- fill: what this repo is responsible for, who uses it, and what is explicitly out of
+     scope. Source: context/architecture.md, docs/specs/, the requester's brief. -->
+<div class="tbl"><table>
+<tr><th>In scope</th><th>Out of scope</th></tr>
+<tr><td>{{IN_SCOPE}}</td><td>{{OUT_OF_SCOPE}}</td></tr>
+</table></div>
+
+<h2 id="stack">3. Tech stack</h2>
+<!-- fill: one row per layer; versions from the manifest/lockfile, not memory. -->
+<div class="tbl"><table>
+<tr><th>Layer</th><th>Technology</th><th>Version</th><th>Source</th></tr>
+<tr><td>{{LAYER}}</td><td>{{TECH}}</td><td>{{VERSION}}</td><td><code>{{MANIFEST_FILE}}</code></td></tr>
+</table></div>
+
+<h2 id="architecture">4. Architecture</h2>
+<!-- fill: how the main parts connect (entry points, layers, external services, data
+     stores) and how this repo talks to the other project repos. -->
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart LR
+  A["Fill: entry point"] --> B["Fill: core layer"] --> C["Fill: data store or external service"]
+</pre></div></details>
+
+<h2 id="structure">5. File structure</h2>
+<!-- fill: top-level layout and what lives where; keep to folders a reader needs. -->
+<pre class="code">{{TREE}}</pre>
+<div class="tbl"><table>
+<tr><th>Path</th><th>Contents</th></tr>
+<tr><td><code>{{PATH}}</code></td><td>{{DESCRIPTION}}</td></tr>
+</table></div>
+
+<h2 id="flows">6. Process flows</h2>
+<!-- fill: one h3 + diagram + short explanation per main flow, e.g. request lifecycle,
+     authentication, a core business transaction, background jobs, build/deploy. -->
+<h3>{{FLOW_NAME}}</h3>
+<p>{{FLOW_SUMMARY}}</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  S["Fill: trigger"] --> P["Fill: step"] --> E["Fill: result"]
+</pre></div></details>
+
+<h2 id="commands">7. Commands</h2>
+<div class="tbl"><table>
+<tr><th>Command</th><th>Does</th></tr>
+<tr><td><code>{{COMMAND}}</code></td><td>{{COMMAND_PURPOSE}}</td></tr>
+</table></div>
+
+<h2 id="config">8. Configuration &amp; environment</h2>
+<!-- fill: variable names and purpose only, from .env.example / config schema.
+     Never copy values from .env, secrets/ or deployed config. -->
+<div class="tbl"><table>
+<tr><th>Variable</th><th>Purpose</th><th>Required</th></tr>
+<tr><td><code>{{ENV_VAR}}</code></td><td>{{ENV_PURPOSE}}</td><td>{{ENV_REQUIRED}}</td></tr>
+</table></div>
+
+<h2 id="quality">9. Testing, quality &amp; CI</h2>
+<div class="tbl"><table>
+<tr><th>Check</th><th>Tool</th><th>Runs</th></tr>
+<tr><td>{{CHECK}}</td><td>{{TOOL}}</td><td>{{WHEN}} <!-- fill: locally / pre-commit / CI on PR --></td></tr>
+</table></div>
+
+<h2 id="conventions">10. Conventions</h2>
+<!-- fill: naming, folder rules, error handling, logging — from context/conventions.md
+     and the repo's lint config. -->
+<ul><li>{{CONVENTION}}</li></ul>
+
+<h2 id="related">11. Related repos &amp; ownership</h2>
+<!-- fill: from the AGENTS.md workspace map; what belongs here vs in sibling repos. -->
+<div class="tbl"><table>
+<tr><th>Repo</th><th>Relationship</th></tr>
+<tr><td><code>{{SIBLING_REPO}}</code></td><td>{{RELATIONSHIP}}</td></tr>
+</table></div>
+
+<h2 id="decisions">12. Decisions &amp; references</h2>
+<ul>
+  <li>{{ADR_OR_SPEC_LINK}}</li>
+</ul>
+
+</div>
+<div class="float-bar">
+  <button id="to-top" class="icon" type="button" title="Scroll to top" aria-label="Scroll to top" hidden>&uarr;</button>
+  <button id="theme-toggle" class="icon" type="button"></button>
+  <button id="toggle-all" class="icon" type="button"></button>
+</div>
+<script>
+  (() => {
+    const root = document.documentElement;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const themeBtn = document.getElementById("theme-toggle");
+    const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : media.matches;
+    const syncTheme = () => {
+      const label = isDark() ? "Switch to light mode" : "Switch to dark mode";
+      themeBtn.textContent = isDark() ? "☀" : "☾";
+      themeBtn.title = label;
+      themeBtn.setAttribute("aria-label", label);
+    };
+    themeBtn.addEventListener("click", () => {
+      const next = isDark() ? "light" : "dark";
+      root.dataset.theme = next;
+      try { localStorage.setItem("theme", next); } catch (e) {}
+      syncTheme();
+      document.dispatchEvent(new Event("themechange"));
+    });
+    media.addEventListener("change", () => {
+      if (root.dataset.theme) return;
+      syncTheme();
+      document.dispatchEvent(new Event("themechange"));
+    });
+    syncTheme();
+
+    const all = [...document.querySelectorAll("details.diagram")];
+    const btn = document.getElementById("toggle-all");
+    const sync = () => {
+      const anyOpen = all.some(d => d.open);
+      const label = anyOpen ? "Collapse all diagrams" : "Expand all diagrams";
+      btn.textContent = anyOpen ? "⊟" : "⊞";
+      btn.title = label;
+      btn.setAttribute("aria-label", label);
+    };
+    btn.addEventListener("click", () => { const open = !all.some(d => d.open); all.forEach(d => { d.open = open; }); sync(); });
+    all.forEach(d => d.addEventListener("toggle", sync));
+    sync();
+
+    const top = document.getElementById("to-top");
+    const syncTop = () => { top.hidden = window.scrollY < 300; };
+    top.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+    window.addEventListener("scroll", syncTop, { passive: true });
+    syncTop();
+  })();
+</script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  const MIN = 0.1, MAX = 4, STEP = 1.2;
+  const MAX_BOX = 0.6, MIN_BOX_PX = 280;
+  let hovered = null;
+
+  const isDark = () => {
+    const t = document.documentElement.dataset.theme;
+    return t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  };
+  const fitScale = d => Math.min(1, d.vp.clientWidth / d.nw, d.vp.clientHeight / d.nh);
+
+  // Zoom keeping the point under (x, y) — viewport coordinates — fixed on screen.
+  function zoomTo(d, scale, x, y) {
+    scale = Math.min(MAX, Math.max(MIN, scale));
+    const r = d.vp.getBoundingClientRect();
+    const ax = x === undefined ? d.vp.clientWidth / 2 : x - r.left;
+    const ay = y === undefined ? d.vp.clientHeight / 2 : y - r.top;
+    const cx = (d.vp.scrollLeft + ax) / d.scale, cy = (d.vp.scrollTop + ay) / d.scale;
+    d.scale = scale;
+    d.svg.style.width = d.nw * scale + "px";
+    d.vp.scrollLeft = cx * scale - ax;
+    d.vp.scrollTop = cy * scale - ay;
+    d.label.textContent = Math.round(scale * 100) + "%";
+  }
+
+  function init(det) {
+    const vp = det.querySelector(".viewport");
+    const pre = vp.querySelector("pre.mermaid");
+
+    const bar = document.createElement("div");
+    bar.className = "zoombar";
+    bar.innerHTML = '<button type="button" data-z="out" title="Zoom out (Ctrl -)">−</button>' +
+      '<span class="zl"></span>' +
+      '<button type="button" data-z="in" title="Zoom in (Ctrl +)">+</button>' +
+      '<button type="button" data-z="fit" title="Fit to box (Ctrl 0)">Fit</button>' +
+      '<button type="button" data-z="one" title="Actual size">1:1</button>';
+    det.insertBefore(bar, vp);
+
+    const d = { det, vp, pre, src: pre.innerHTML, svg: null, nw: 0, nh: 0, scale: 1, sized: false, label: bar.querySelector(".zl") };
+    bar.addEventListener("click", e => {
+      if (!d.svg) return;
+      const z = e.target.closest("button")?.dataset.z;
+      if (z === "in") zoomTo(d, d.scale * STEP);
+      else if (z === "out") zoomTo(d, d.scale / STEP);
+      else if (z === "fit") zoomTo(d, fitScale(d));
+      else if (z === "one") zoomTo(d, 1);
+    });
+
+    vp.addEventListener("mouseenter", () => { hovered = d; });
+    vp.addEventListener("mouseleave", () => { if (hovered === d) hovered = null; });
+    vp.addEventListener("focus", () => { hovered = d; });
+    vp.addEventListener("wheel", e => {
+      if (!(e.ctrlKey || e.metaKey) || !d.svg) return;
+      e.preventDefault();
+      zoomTo(d, d.scale * (e.deltaY < 0 ? STEP : 1 / STEP), e.clientX, e.clientY);
+    }, { passive: false });
+
+    vp.addEventListener("pointerdown", e => {
+      if (e.pointerType !== "mouse" || e.button !== 0) return;
+      const sx = e.clientX, sy = e.clientY, sl = vp.scrollLeft, st = vp.scrollTop;
+      vp.setPointerCapture(e.pointerId);
+      vp.classList.add("panning");
+      const move = ev => {
+        vp.scrollLeft = sl - (ev.clientX - sx);
+        vp.scrollTop = st - (ev.clientY - sy);
+      };
+      const up = () => { vp.removeEventListener("pointermove", move); vp.classList.remove("panning"); };
+      vp.addEventListener("pointermove", move);
+      vp.addEventListener("pointerup", up, { once: true });
+      vp.addEventListener("pointercancel", up, { once: true });
+    });
+    return d;
+  }
+
+  // Bind a freshly rendered SVG; size the box only on the first render.
+  function attach(d) {
+    const svg = d.vp.querySelector("svg");
+    if (!svg) return;
+    const vb = svg.viewBox.baseVal;
+    d.svg = svg;
+    d.nw = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    d.nh = vb && vb.height ? vb.height : svg.getBoundingClientRect().height;
+    svg.style.maxWidth = "none";
+    svg.style.height = "auto";
+    if (d.sized) {
+      svg.style.width = d.nw * d.scale + "px";
+      d.vp.scrollLeft = d.saved[0];
+      d.vp.scrollTop = d.saved[1];
+      return;
+    }
+    const widthFitH = d.nh * Math.min(1, d.vp.clientWidth / d.nw);
+    const boxH = Math.min(Math.max(widthFitH, Math.min(d.nh, MIN_BOX_PX)), window.innerHeight * MAX_BOX);
+    d.vp.style.height = Math.ceil(boxH) + 4 + "px";
+    d.sized = true;
+    zoomTo(d, fitScale(d));
+  }
+
+  const items = [...document.querySelectorAll("details.diagram")].map(init);
+
+  // Mermaid measures text, so collapsed diagrams are opened while rendering.
+  async function render() {
+    mermaid.initialize({ startOnLoad: false, theme: isDark() ? "dark" : "default", flowchart: { htmlLabels: true } });
+    const closed = items.filter(d => !d.det.open);
+    closed.forEach(d => { d.det.open = true; });
+    items.forEach(d => {
+      d.saved = [d.vp.scrollLeft, d.vp.scrollTop];
+      d.pre.removeAttribute("data-processed");
+      d.pre.innerHTML = d.src;
+    });
+    await mermaid.run({ nodes: items.map(d => d.pre) });
+    items.forEach(attach);
+    closed.forEach(d => { d.det.open = false; });
+  }
+
+  await render();
+  document.addEventListener("themechange", render);
+
+  document.addEventListener("keydown", e => {
+    if (!(e.ctrlKey || e.metaKey) || !hovered || !hovered.svg || !hovered.det.open) return;
+    if (e.key === "+" || e.key === "=") { e.preventDefault(); zoomTo(hovered, hovered.scale * STEP); }
+    else if (e.key === "-" || e.key === "_") { e.preventDefault(); zoomTo(hovered, hovered.scale / STEP); }
+    else if (e.key === "0") { e.preventDefault(); zoomTo(hovered, fitScale(hovered)); }
+  });
+</script>
+</body>
+</html>

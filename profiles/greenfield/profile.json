@@ -1,0 +1,47 @@
+{
+  "type": "greenfield",
+  "label": "Fresh new code project",
+  "mode": "build",
+  "truth_order": [
+    "Explicit developer instruction",
+    "The feature spec / acceptance criteria (docs/specs/)",
+    "Accepted ADRs and context/architecture.md",
+    "context/conventions.md and the stack's idiom"
+  ],
+  "required_roles": [],
+  "recommended_roles": [
+    "frontend",
+    "backend",
+    "docs"
+  ],
+  "skip_roles": [
+    "legacy-frontend",
+    "legacy-backend",
+    "legacy-database"
+  ],
+  "modules": {
+    "tracker": false,
+    "db_query": false,
+    "usage_metrics": true,
+    "log_triage": false,
+    "parity": false,
+    "pr_metrics": true
+  },
+  "primary_commands": [
+    "/scaffold-project",
+    "/build",
+    "/review-pr",
+    "/maintain-context"
+  ],
+  "always_read_mistakes": [
+    "speculative-abstraction"
+  ],
+  "scaffold": [
+    "_shared/scaffold/docs/specs/_TEMPLATE.md",
+    "greenfield/scaffold/context/architecture.md",
+    "greenfield/scaffold/context/conventions.md",
+    "greenfield/scaffold/docs/adr/README.md",
+    "greenfield/scaffold/docs/adr/0000-template.md"
+  ],
+  "allow_create_repos": true
+}

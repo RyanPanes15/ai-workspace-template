@@ -1,0 +1,7 @@
+{"project": {"name": "fixture", "types": ["port", "feature"]},
+ "repos": [
+  {"name": "web", "role": "frontend", "path": "repos/web", "policy": "editable"},
+  {"name": "legacy-client", "role": "legacy-frontend", "path": "repos/legacy-client", "policy": "read-only"},
+  {"name": "legacy-server", "role": "legacy-backend", "path": "repos/legacy-server", "policy": "read-only"},
+  {"name": "db", "role": "database", "path": "repos/db", "policy": "read-only"}
+ ]}

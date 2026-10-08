@@ -1,0 +1,4 @@
+2026-09-30 10:01:02 ERROR TypeError: Cannot read properties of undefined (reading 'id')
+    at saveOrder (webpack:///./src/api/orderApi.ts:5:19)
+    at async handleSubmit (webpack:///./src/screens/order/OrderForm.tsx:41:18)
+    at processQueue (node_modules/react-dom/cjs/react-dom.development.js:1234:9)

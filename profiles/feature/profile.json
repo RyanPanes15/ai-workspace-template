@@ -1,0 +1,53 @@
+{
+  "type": "feature",
+  "label": "Feature addition (on an existing port)",
+  "mode": "change",
+  "truth_order": [
+    "Explicit developer instruction",
+    "The feature request / spec (docs/specs/) — the deliberate divergence is the deliverable",
+    "context/parity-baseline.md — ported behavior that must not break",
+    "Reference system — only for behavior the feature leaves untouched",
+    "Existing conventions of the ported code"
+  ],
+  "required_roles": [
+    [
+      "frontend",
+      "backend"
+    ]
+  ],
+  "recommended_roles": [
+    "legacy-frontend",
+    "legacy-backend",
+    "database",
+    "docs",
+    "tests"
+  ],
+  "skip_roles": [],
+  "modules": {
+    "tracker": true,
+    "db_query": true,
+    "usage_metrics": true,
+    "log_triage": false,
+    "parity": false,
+    "pr_metrics": true
+  },
+  "primary_commands": [
+    "/analyze-change",
+    "/implement-change",
+    "/build",
+    "/review-pr",
+    "/fix"
+  ],
+  "always_read_mistakes": [
+    "speculative-abstraction",
+    "name-keyed-sweep"
+  ],
+  "scaffold": [
+    "_shared/scaffold/docs/specs/_TEMPLATE.md",
+    "feature/scaffold/context/parity-baseline.md",
+    "_shared/scaffold/context/environment.md",
+    "_shared/scaffold/context/domain-glossary.md",
+    "_shared/scaffold/context/test-records.md"
+  ],
+  "allow_create_repos": false
+}

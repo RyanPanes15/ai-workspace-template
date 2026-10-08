@@ -1,0 +1,7 @@
+{
+  "active": "dev",
+  "profiles": {
+    "dev": {"label": "local dev DB", "driver": "postgres", "host": "localhost", "port": 5432, "database": "app", "user": "readonly", "password": "CHANGE_ME"},
+    "tester": {"label": "instance the testers/reporters use", "driver": "postgres", "host": "localhost", "port": 5433, "database": "app", "user": "readonly", "password": "CHANGE_ME"}
+  }
+}

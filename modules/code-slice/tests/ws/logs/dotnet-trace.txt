@@ -1,0 +1,3 @@
+System.NullReferenceException: オブジェクト参照がオブジェクト インスタンスに設定されていません。
+   場所 Acme.Client.Forms.OrderFrm.SaveOrder() 場所 C:\build\src\Forms\OrderFrm.cs:行 30
+   場所 Acme.Client.Forms.OrderFrm.btnSave_Click(Object sender, EventArgs e) 場所 C:\build\src\Forms\OrderFrm.cs:行 24

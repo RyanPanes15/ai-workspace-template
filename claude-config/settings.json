@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "sonnet",
+  "effortLevel": "medium",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/repo_guard.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking repo roles"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/safe_git_allow.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking safe-git allowlist"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post_edit_check.py\"",
+            "timeout": 30,
+            "statusMessage": "Syntax-checking the edited file"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(ls)",
+      "Bash(ls *)",
+      "Bash(pwd)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(diff *)",
+      "Bash(file *)",
+      "Bash(stat *)",
+      "Bash(tree *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(find *)",
+      "Bash(jq *)",
+      "Bash(which *)",
+      "Bash(realpath *)",
+      "Bash(dirname *)",
+      "Bash(basename *)",
+      "Bash(mkdir *)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git show *)",
+      "Bash(git diff*)",
+      "Bash(git blame *)",
+      "Bash(git branch)",
+      "Bash(git branch -a*)",
+      "Bash(git branch -r*)",
+      "Bash(git branch -v*)",
+      "Bash(git branch --list*)",
+      "Bash(git branch --show-current*)",
+      "Bash(git branch --contains*)",
+      "Bash(git rev-parse *)",
+      "Bash(git rev-list *)",
+      "Bash(git ls-files*)",
+      "Bash(git ls-tree *)",
+      "Bash(git grep *)",
+      "Bash(git shortlog*)",
+      "Bash(git describe*)",
+      "Bash(git reflog*)",
+      "Bash(git remote -v)",
+      "Bash(git stash list*)",
+      "Bash(git worktree list*)",
+      "Bash(git fetch*)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr diff *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh pr status*)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list*)",
+      "Bash(gh run view *)",
+      "Bash(gh run list*)",
+      "Bash(gh repo view *)",
+      "Bash(python modules/db-query/run_query.py *)",
+      "Bash(python modules/tracker/fetch_items.py*)",
+      "Bash(python setup/setup_workspace.py --check*)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Write(./_work/**)",
+      "Edit(./_work/**)",
+      "Write(./reports/**)",
+      "Edit(./reports/**)",
+      "Bash(python modules/area-index/area_index.py *)",
+      "Bash(python modules/code-slice/cs.py *)",
+      "Bash(py modules/code-slice/cs.py *)",
+      "Bash(python3 modules/code-slice/cs.py *)",
+      "Bash(py modules/area-index/area_index.py *)",
+      "Bash(python modules/payload-decode/decode_response.py *)",
+      "Bash(py modules/payload-decode/decode_response.py *)",
+      "Bash(python .claude/hooks/post_edit_check.py *)",
+      "Bash(py .claude/hooks/post_edit_check.py *)",
+      "Bash(python modules/log-triage/triage_logs.py *)",
+      "Bash(py modules/log-triage/triage_logs.py *)",
+      "Bash(python modules/parity/parity_check.py*)",
+      "Bash(py modules/parity/parity_check.py*)",
+      "Bash(python modules/pr-metrics/fetch_pr_history.py --summary*)",
+      "Bash(py modules/pr-metrics/fetch_pr_history.py --summary*)",
+      "Bash(python modules/usage-metrics/usage_tracker.py --check*)",
+      "Bash(py modules/usage-metrics/usage_tracker.py --check*)",
+      "Bash(python modules/usage-metrics/usage_tracker.py --report*)",
+      "Bash(py modules/usage-metrics/usage_tracker.py --report*)",
+      "Write(./mistakes/**)",
+      "Edit(./mistakes/**)",
+      "Bash(python modules/port-status/port_status.py)",
+      "Bash(python modules/port-status/port_status.py --check*)",
+      "Bash(python modules/port-status/port_status.py --discover*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git reset *)",
+      "Bash(git restore *)",
+      "Bash(git cherry-pick *)",
+      "Bash(git rebase*)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr merge*)"
+    ],
+    "deny": [
+      "Read(./secrets/**)",
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git commit --amend*)"
+    ]
+  }
+}

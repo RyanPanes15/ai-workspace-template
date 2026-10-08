@@ -1,0 +1,43 @@
+# ── Secrets ─────────────────────────────────────────────
+secrets/
+.env
+.env.local
+.env.*
+!.env.example
+*.key
+*.p12
+*.pfx
+id_rsa*
+credentials*.json
+*.pem
+*.ppk
+*service-account*.json
+AGENTS.local.md
+CLAUDE.local.md
+
+# ── Project repos (each is its own git repo) ────────────
+repos/*
+!repos/.gitkeep
+
+# ── Generated / session data ────────────────────────────
+_work/
+reports/
+workspace.config.local.json
+
+# ── Machine-local agent config ──────────────────────────
+.claude/settings.local.json
+.claude/worktrees/
+
+# ── Noise ───────────────────────────────────────────────
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/
+.venv/
+venv/
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

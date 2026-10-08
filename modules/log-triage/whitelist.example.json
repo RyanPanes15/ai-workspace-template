@@ -1,0 +1,4 @@
+[
+  {"match_by": "message", "pattern": "health check", "scope": "", "note": "load-balancer pings", "added_by": "", "added_date": ""},
+  {"match_by": "code", "pattern": "E1001", "scope": "/api/orders", "note": "expected validation noise on the order form during rework", "added_by": "", "added_date": ""}
+]

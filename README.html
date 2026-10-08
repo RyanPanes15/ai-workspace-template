@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Workspace Template</title>
+<script>
+  try { const t = localStorage.getItem("theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --border: #d1d9e0;
+    --code-bg: #f6f8fa; --accent: #0969da; --note-bg: #ddf4ff; --warn-bg: #fff8c5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --border: #3d444d;
+      --code-bg: #151b23; --accent: #4493f8; --note-bg: #0c2d6b; --warn-bg: #3b2e00;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --border: #3d444d;
+    --code-bg: #151b23; --accent: #4493f8; --note-bg: #0c2d6b; --warn-bg: #3b2e00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.6 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 2em; margin: 0 0 4px; }
+  h2 { border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-top: 48px; }
+  h3 { margin-top: 28px; }
+  a { color: var(--accent); }
+  code, pre { font-family: Consolas, "SF Mono", Menlo, monospace; font-size: 13px; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre.code { background: var(--code-bg); padding: 12px 14px; border-radius: 6px; overflow-x: auto; }
+  .tbl { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+  .lead { color: var(--muted); font-size: 1.05em; margin-top: 0; }
+  .note, .warn { padding: 10px 14px; border-radius: 6px; margin: 14px 0; }
+  .note { background: var(--note-bg); }
+  .warn { background: var(--warn-bg); }
+  nav.toc { background: var(--code-bg); border-radius: 6px; padding: 12px 18px; margin: 20px 0; }
+  nav.toc ol { margin: 4px 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+  .diagram { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin: 14px 0; position: relative; }
+  .diagram > summary { cursor: pointer; color: var(--muted); font-size: 13px; user-select: none; }
+  .diagram[open] > summary { margin-bottom: 8px; }
+  .viewport { display: flex; overflow: auto; cursor: grab; user-select: none; outline: none; }
+  .viewport:focus-visible { box-shadow: 0 0 0 2px var(--accent); border-radius: 4px; }
+  .viewport.panning { cursor: grabbing; }
+  .viewport > pre.mermaid { flex: none; margin: auto; }
+  .viewport svg { display: block; }
+  .zoombar { position: absolute; top: 6px; right: 10px; display: flex; gap: 4px; align-items: center; font-size: 12px; }
+  .zoombar button, .float-bar button {
+    font: inherit; color: var(--fg); background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 8px; cursor: pointer;
+  }
+  .zoombar button:hover, .float-bar button:hover { border-color: var(--accent); }
+  .zoombar .zl { min-width: 40px; text-align: center; color: var(--muted); }
+  .diagram:not([open]) > .zoombar { display: none; }
+  .float-bar { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .float-bar .icon { width: 36px; height: 36px; padding: 0; font-size: 18px; line-height: 1; }
+  .float-bar button { padding: 6px 12px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  #to-top[hidden] { display: none; }
+  pre.mermaid { background: transparent; margin: 0; }
+  .src { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>AI Workspace Template</h1>
+<p class="lead">A reusable orchestration workspace for AI-assisted development across a multi-repo
+project. It sits <strong>above</strong> your code repos and gives any coding agent the same operating
+contract, workflows, verification playbooks, guardrail hooks and helper scripts.</p>
+
+<div class="note">This page is an illustrated companion to <code>README.md</code>. Facts are taken from
+<code>AGENTS.md</code>, <code>workflows/*.md</code>, <code>docs/*.md</code> and <code>claude-config/</code>; each section names its source.
+Diagrams are rendered with Mermaid from a CDN, so they need an internet connection.<br>Diagram controls: click <em>Diagram</em> to minimize one; with the pointer over a diagram, <kbd>Ctrl</kbd>+scroll or <kbd>Ctrl</kbd> <kbd>+</kbd>/<kbd>-</kbd> zooms it and <kbd>Ctrl</kbd> <kbd>0</kbd> fits it; drag to pan.</div>
+
+<nav class="toc"><strong>Contents</strong>
+<ol>
+  <li><a href="#what">What the workspace is</a></li>
+  <li><a href="#layout">Directory layout</a></li>
+  <li><a href="#layers">Instruction layering &amp; token budget</a></li>
+  <li><a href="#types">Project types &amp; work modes</a></li>
+  <li><a href="#setup">Setup flow</a></li>
+  <li><a href="#commands">Commands → workflows</a></li>
+  <li><a href="#defect">Defect lifecycle: analyze → fix → PR</a></li>
+  <li><a href="#analyze">Analyze workflow</a></li>
+  <li><a href="#fix">Fix workflow</a></li>
+  <li><a href="#git">Git / PR orchestration</a></li>
+  <li><a href="#review">PR review</a></li>
+  <li><a href="#build">Build &amp; scaffold (greenfield)</a></li>
+  <li><a href="#port">Port a feature</a></li>
+  <li><a href="#change">Change requests</a></li>
+  <li><a href="#support">Supporting workflows</a></li>
+  <li><a href="#hooks">Guardrail hooks</a></li>
+  <li><a href="#routing">Model routing</a></li>
+  <li><a href="#learning">Learning loop: mistakes → rules</a></li>
+  <li><a href="#other">Using it with other agents</a></li>
+  <li><a href="#principles">Design principles</a></li>
+</ol></nav>
+
+<!-- ================================================================ -->
+<h2 id="what">1. What the workspace is</h2>
+<p>The workspace is a small git repo of its own. Your project's code repos are cloned (or linked) under
+<code>repos/</code>, and each is registered with a <strong>role</strong> (frontend, backend, database, reports, docs,
+tests, legacy/reference, infra, other) and a <strong>policy</strong> that controls what an agent may do there.</p>
+
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TB
+  subgraph WS["Workspace repo (this template)"]
+    direction LR
+    A["AGENTS.md<br/>rules (always loaded)"]
+    W["workflows/<br/>procedures"]
+    D["docs/<br/>playbooks"]
+    C["context/<br/>project facts"]
+    M["mistakes/<br/>lessons"]
+    MOD["modules/<br/>helper CLIs"]
+    H[".claude/<br/>commands, agents, hooks"]
+  end
+  subgraph R["repos/ (gitignored)"]
+    direction LR
+    FE["frontend<br/>editable"]
+    BE["backend<br/>editable"]
+    DB["database schema<br/>pr-only / read-only"]
+    LEG["legacy / reference<br/>read-only"]
+    SH["shared / other team<br/>flag-only"]
+  end
+  AG(["Coding agent<br/>Claude Code, Codex, Cursor, Gemini, Copilot"]) --> WS
+  WS -->|"reads, edits per policy"| R
+</pre></div></details>
+
+<div class="tbl"><table>
+<tr><th>Repo policy</th><th>Agent may</th><th>Enforced by</th></tr>
+<tr><td><code>editable</code></td><td>Investigate, edit, commit on topic branches; push/PR only with developer confirmation</td><td>AGENTS.md §3 + permission prompts</td></tr>
+<tr><td><code>pr-only</code></td><td>Change only through a developer-initiated PR</td><td>AGENTS.md §3</td></tr>
+<tr><td><code>flag-only</code></td><td>Investigate; the needed change is described, not made</td><td><code>repo_guard.py</code> denies edits</td></tr>
+<tr><td><code>read-only</code></td><td>Read only — no edits, no mutating git</td><td><code>repo_guard.py</code> denies edits and mutating git</td></tr>
+</table></div>
+<p class="src">Source: AGENTS.md §3, <code>workspace.config.example.json</code>, <code>claude-config/hooks/repo_guard.py</code>.</p>
+
+<!-- ================================================================ -->
+<h2 id="layout">2. Directory layout</h2>
+<div class="tbl"><table>
+<tr><th>Path</th><th>Contents</th><th>When it is read</th></tr>
+<tr><td><code>AGENTS.md</code></td><td>Canonical rules for every model: workspace map, behavior contract, guardrails, search discipline, methodology, git conventions</td><td>Always</td></tr>
+<tr><td><code>CLAUDE.md</code> / <code>GEMINI.md</code></td><td>Thin shims that import <code>AGENTS.md</code></td><td>Always (by that tool)</td></tr>
+<tr><td><code>workspace.config.json</code></td><td>Generated by setup: repos, roles, policies, git naming, modules (example: <code>workspace.config.example.json</code>)</td><td>By setup, hooks, modules</td></tr>
+<tr><td><code>workflows/</code></td><td>Tool-neutral step-by-step procedures (analyze, fix, review-pr, build, scaffold-project, port-feature, change-request, area-loop, db-query, log-triage, export, stakeholder-reply, maintain-context, repo-overview)</td><td>Only the one being run</td></tr>
+<tr><td><code>claude-config/</code> → <code>.claude/</code></td><td>Slash commands, subagents, hooks, setup skill, <code>model-routing.md</code>, <code>settings.json</code>. Ships as <code>claude-config/</code>; the first setup run installs it as <code>.claude/</code> without overwriting existing files</td><td>By Claude Code</td></tr>
+<tr><td><code>docs/</code></td><td>Playbooks: design-principles, code-slice-scope, verification-guide, git-workflow, lessons-catalog, global-defaults, parity, project-types, workspace-topology; <code>templates/repo-readme.html</code> (repo overview page shell)</td><td>When a workflow step points at them</td></tr>
+<tr><td><code>context/</code></td><td>Project knowledge; <code>context/repos/&lt;name&gt;.md</code> per repo (generated from <code>_TEMPLATE.md</code>)</td><td>Before working in that repo</td></tr>
+<tr><td><code>mistakes/</code></td><td>One file per class of agent mistake + <code>INDEX.md</code></td><td><code>INDEX.md</code> at the start of every non-trivial task</td></tr>
+<tr><td><code>modules/</code></td><td>Optional CLIs: code-slice (<code>cs.py</code>), tracker, db-query, usage-metrics, area-index, lint-gate, payload-decode, port-status, log-triage, parity, pr-metrics</td><td>Invoked by workflow steps</td></tr>
+<tr><td><code>profiles/</code></td><td>Per-project-type rules, defaults and scaffolds</td><td>By setup</td></tr>
+<tr><td><code>setup/setup_workspace.py</code></td><td>Bootstrap script</td><td>Once, then on changes</td></tr>
+<tr><td><code>repos/</code></td><td>Your project repos (gitignored)</td><td>Per task</td></tr>
+<tr><td><code>secrets/</code></td><td>Credentials for modules (gitignored)</td><td>By modules only</td></tr>
+<tr><td><code>_work/</code></td><td>Run checklists (<code>_work/runs/&lt;task&gt;/TASKS.md</code>), evidence, logs</td><td>During a task</td></tr>
+<tr><td><code>reports/</code></td><td>Exported analysis trails, usage ledger</td><td>After a task</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2 id="layers">3. Instruction layering &amp; token budget</h2>
+<p>Only <code>AGENTS.md</code> is always loaded. Everything else is read on demand, so the base context stays small.
+When layers conflict, the later and narrower one wins.</p>
+
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart LR
+  P["Personal<br/>~/.claude/CLAUDE.md"] --> W["Workspace<br/>AGENTS.md"] --> R["Repo<br/>context/repos/name.md<br/>then the repo's own AGENTS.md / CLAUDE.md"] --> L["Local<br/>AGENTS.local.md (gitignored)"]
+</pre></div></details>
+
+<div class="tbl"><table>
+<tr><th>Kind of content</th><th>Lives in</th><th>Loaded</th></tr>
+<tr><td>Rules</td><td><code>AGENTS.md</code></td><td>Always</td></tr>
+<tr><td>Project facts</td><td><code>context/</code></td><td>Before touching that repo; cached for the session</td></tr>
+<tr><td>Procedures</td><td><code>workflows/</code></td><td>Only the one being run</td></tr>
+<tr><td>Playbooks</td><td><code>docs/</code></td><td>When a workflow step points at them</td></tr>
+<tr><td>Past mistakes</td><td><code>mistakes/INDEX.md</code> → matching files</td><td>At the start of every non-trivial task</td></tr>
+<tr><td>Code</td><td><code>modules/code-slice/cs.py</code> slices</td><td>Only the functions a task needs; whole files only under ~300 lines</td></tr>
+</table></div>
+<p class="src">Source: AGENTS.md §0, §4.</p>
+
+<!-- ================================================================ -->
+<h2 id="types">4. Project types &amp; work modes</h2>
+<p>Setup asks which kind of project this is (one or a combination). The type selects the work mode — what
+"correct" means — plus scaffolded context, default modules and the main commands. Change it later with
+<code>python setup/setup_workspace.py --set-type</code>.</p>
+
+<div class="tbl"><table>
+<tr><th></th><th>Greenfield</th><th>Maintenance</th><th>Port</th><th>Feature</th></tr>
+<tr><th>Work mode</th><td>build</td><td>defect</td><td>port</td><td>change</td></tr>
+<tr><th>"Correct" means</th><td>The spec + accepted ADRs</td><td>Released behavior; verified report premise</td><td>Reference behavior (parity)</td><td>The feature spec; port baseline must not break</td></tr>
+<tr><th>Reference repos</th><td>None</td><td>Optional</td><td><strong>Required</strong> (legacy client/server)</td><td>Optional (untouched behavior only)</td></tr>
+<tr><th>Main workflows</th><td>scaffold-project, build, review-pr</td><td>analyze, fix, log-triage, db-query, stakeholder-reply, area-loop</td><td>port-feature, analyze/fix for regressions</td><td>change-request, build (net-new), fix</td></tr>
+<tr><th>Default modules</th><td>usage-metrics, pr-metrics</td><td>tracker, db-query, usage, log-triage</td><td>tracker, db-query, usage, pr-metrics, port-status</td><td>tracker, db-query, usage, pr-metrics</td></tr>
+<tr><th>Mistake files always read</th><td>speculative-abstraction</td><td>static-read-of-runtime-bug, wrong-environment-evidence, invalid-negative-trial</td><td>dropped-reference-rule, name-keyed-sweep</td><td>speculative-abstraction, name-keyed-sweep</td></tr>
+<tr><th>Typical gate</th><td>Spec confirmed before build; ADR for costly decisions</td><td>Reviewer round with pre-fix control</td><td>Completeness verifier: no MISSING / WEAKENED / LAYER GAP</td><td>Regression of every touched shared component</td></tr>
+</table></div>
+
+<h3>Deciding what "correct" means</h3>
+<p>For every work item the agent ranks its sources; when two conflict it <strong>stops and surfaces the conflict</strong>
+instead of picking one.</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  S1["1. Explicit developer instruction"] --> S2["2. Written spec / requirement"]
+  S2 --> S3["3. Reporter's expected behavior<br/>(after its premise is verified)"]
+  S3 --> S4["4. Reference implementation<br/>(ports and parity fixes)"]
+  S4 --> S5["5. Existing conventions and idiom"]
+  S1 -.->|"conflict between any two"| X{{"Stop and surface;<br/>record the decision in the report"}}
+</pre></div></details>
+<p class="src">Source: <code>docs/project-types.md</code>, AGENTS.md §2.</p>
+
+<!-- ================================================================ -->
+<h2 id="setup">5. Setup flow</h2>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  A["Copy the template, git init"] --> B["python setup/setup_workspace.py"]
+  B --> C["Installs claude-config/ as .claude/<br/>(never overwrites)"]
+  B --> D["Per role: git URL or local path?<br/>clone on confirmation"]
+  D --> E["Detect stacks"]
+  E --> F["Write workspace.config.json,<br/>AGENTS.md workspace map,<br/>context/repos/name.md"]
+  F --> G["List roles not provided<br/>and the fallbacks agents will use"]
+  G --> H["You fill the 'fill in' parts of<br/>context/repos/*.md"]
+  H --> I["Optional: --install-global,<br/>credentials in secrets/"]
+  I --> J["Start the agent from the workspace root;<br/>try /analyze item-id"]
+</pre></div></details>
+
+<div class="tbl"><table>
+<tr><th>Command</th><th>Purpose</th></tr>
+<tr><td><code>python setup/setup_workspace.py</code></td><td>First run: install <code>.claude/</code>, register repos, generate config and context</td></tr>
+<tr><td><code>--set-type &lt;greenfield|maintenance|port|feature&gt;</code></td><td>Set or change the project type</td></tr>
+<tr><td><code>--check</code></td><td>Validate paths, branches, dirty read-only repos</td></tr>
+<tr><td><code>--render</code></td><td>Regenerate after editing the config</td></tr>
+<tr><td><code>--dry-run</code></td><td>Show what would change</td></tr>
+<tr><td><code>--install-global</code></td><td>Install personal defaults to <code>~/.claude/CLAUDE.md</code> (backs up the existing file)</td></tr>
+<tr><td><code>/setup-workspace</code></td><td>Same changes, conversationally, inside Claude Code</td></tr>
+</table></div>
+<div class="warn">Filling in <code>context/repos/*.md</code> (structure, ownership, known defect patterns) is described in the README
+as the highest-leverage 20 minutes of setup. A new developer's half-day checklist is in <code>ONBOARDING.md</code>.</div>
+
+<!-- ================================================================ -->
+<h2 id="commands">6. Commands → workflows</h2>
+<p>Slash commands in <code>.claude/commands/</code> are thin wrappers around <code>workflows/*.md</code>; their frontmatter pins the model
+tier and effort. Other agents can run the same workflow by being told to "follow <code>workflows/fix.md</code> for item 123".</p>
+<div class="tbl"><table>
+<tr><th>Command</th><th>Workflow</th><th>Does</th><th>Model / effort</th><th>Writes code?</th></tr>
+<tr><td><code>/analyze</code></td><td>analyze.md</td><td>Root-cause one or more items without code changes</td><td>opus / high</td><td>No</td></tr>
+<tr><td><code>/fix</code></td><td>fix.md</td><td>Fix one item with regression, sweep, reviewer round; tests/push/PR on confirmation</td><td>opus / high</td><td>Yes</td></tr>
+<tr><td><code>/review-pr</code></td><td>review-pr.md</td><td>Merge-blocking problems only; drafts the review comment</td><td>opus / high</td><td>No</td></tr>
+<tr><td><code>/area-loop</code></td><td>area-loop.md</td><td>Analyze or fix every item of one area in one warm context</td><td>opus / high</td><td>Yes (fix mode)</td></tr>
+<tr><td><code>/build</code></td><td>build.md</td><td>Spec → design note → tests → small commits → evidence</td><td>opus / high</td><td>Yes</td></tr>
+<tr><td><code>/scaffold-project</code></td><td>scaffold-project.md</td><td>Greenfield repo skeleton with stack ADR, lint/test/build/CI, and its <code>README.html</code> overview</td><td>opus / high</td><td>Yes</td></tr>
+<tr><td><code>/repo-overview</code></td><td>repo-overview.md</td><td>Generate or refresh a repo's <code>README.html</code>: details, scope, stack, structure, process flows</td><td>sonnet / medium</td><td>Docs only</td></tr>
+<tr><td><code>/adr</code></td><td>(build/scaffold docs)</td><td>Draft an architecture decision record (status proposed)</td><td>sonnet / medium</td><td>Docs only</td></tr>
+<tr><td><code>/port-feature</code></td><td>port-feature.md</td><td>Port a screen/feature with a logic inventory and completeness verification</td><td>opus / high</td><td>Yes</td></tr>
+<tr><td><code>/analyze-change</code></td><td>change-request.md Part 1</td><td>Requirement, impact, collisions, acceptance criteria, estimate</td><td>opus / high</td><td>No</td></tr>
+<tr><td><code>/implement-change</code></td><td>change-request.md Part 2</td><td>Implement an analyzed change request; asks the target branch every time</td><td>opus / high</td><td>Yes</td></tr>
+<tr><td><code>/db-query</code></td><td>db-query.md</td><td>Read-only DB investigation or reproducer-data search</td><td>sonnet / medium</td><td>No</td></tr>
+<tr><td><code>/log-triage</code></td><td>log-triage.md</td><td>Cluster log errors into fingerprinted issues and classify against current code</td><td>sonnet / medium</td><td>No</td></tr>
+<tr><td><code>/stakeholder-reply</code></td><td>stakeholder-reply.md</td><td>Draft a reply tuned to category and fix status</td><td>sonnet / medium</td><td>No (draft)</td></tr>
+<tr><td><code>/export</code></td><td>export.md</td><td>Export an item's trail to <code>reports/</code> with change footprint</td><td>haiku</td><td>Reports only</td></tr>
+<tr><td><code>/maintain-context</code></td><td>maintain-context.md</td><td>Fold corrections into rules, prune, check routing drift</td><td>opus / high</td><td>Context files</td></tr>
+<tr><td><code>/setup-workspace</code></td><td>setup skill</td><td>Register repos and regenerate the workspace map</td><td>sonnet / medium</td><td>Config only</td></tr>
+</table></div>
+<p>Subagents: <code>item-scaffolder</code> and <code>report-formatter</code> (light, mechanical); <code>fix-verifier</code> and
+<code>completeness-verifier</code> (deep, adversarial).</p>
+
+<!-- ================================================================ -->
+<h2 id="defect">7. Defect lifecycle: analyze → fix → PR</h2>
+<p>The core maintenance loop. Analysis is read-only; the fix runs to a structured report and a mandatory
+reviewer round, then stops at a human gate. Tests, push and PR each need an explicit "yes".</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart LR
+  I["Work item<br/>(tracker)"] --> AN["/analyze<br/>read-only"]
+  AN --> NX{"Recommended<br/>next step"}
+  NX -->|"fix"| FX["/fix<br/>Steps 1-8"]
+  NX -->|"db-query"| DQ["/db-query"]
+  NX -->|"stakeholder reply"| SR["/stakeholder-reply"]
+  NX -->|"clarify / self-test"| HU["Developer"]
+  FX --> RV["Reviewer round<br/>Step 9.5"]
+  RV --> G{{"Human gate:<br/>push?"}}
+  G -->|"yes"| GW["Git / PR orchestration<br/>10.1-10.10"]
+  GW --> PR["PR + CI checks"]
+  PR --> REC["Record: reports/, metrics,<br/>mistakes/"]
+</pre></div></details>
+
+<!-- ================================================================ -->
+<h2 id="analyze">8. Analyze workflow (<code>workflows/analyze.md</code>)</h2>
+<p>Orchestration first loads item records and evidence, locates files, and writes a shared-context digest to the
+scratchpad. Then each item goes through the per-item steps.</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  O["Orchestration: load items, pull evidence,<br/>locate files, write SHARED_CONTEXT.md"] --> S0
+  S0["0. Plan + read mistakes/INDEX.md"] --> S1["1. Status check"] --> S2["2. Translate and summarize"] --> S3["3. Validate category"] --> S4["4. Repro steps"]
+  S4 --> S5["5. Identity check<br/>is this the code the report describes?"]
+  S5 --> S6["6. Precondition enumeration<br/>(before any hypothesis)"]
+  S6 --> S7["7. Tier 1: new-code analysis<br/>hypothesis tied to a specific predicate"]
+  S7 --> RG{"Runtime-state symptom<br/>read statically?"}
+  RG -->|"yes"| CAP["Cap confidence at medium"]
+  RG -->|"no"| S8
+  CAP --> S8["8. Log inspection"] --> S9["9. Historical context"]
+  S9 --> T2{"Tier 2 trigger?<br/>prior behavior, calculation,<br/>missing field, default divergence,<br/>unclear root cause"}
+  T2 -->|"yes"| S10["10. Reference comparison<br/>+ spec-change registry check"]
+  T2 -->|"no"| SK["Reference check: skipped — reason"]
+  S10 --> S11["11. Decision visibility one-liners"]
+  SK --> S11
+  S11 --> S12["12. Sweep pre-flag"] --> OUT["Output: per-item block +<br/>batch table + recommended next step"]
+</pre></div></details>
+<div class="tbl"><table>
+<tr><th>Rule</th><th>Why</th></tr>
+<tr><td>Precondition table before hypothesis</td><td>UI gates, data-load branches, alternate entry paths and reset coverage are enumerated before guessing a cause</td></tr>
+<tr><td>Confidence label is mandatory (default medium)</td><td>Static reads of runtime-state bugs cap at medium until a runtime observation is attached</td></tr>
+<tr><td>A difference from the reference is a regression <em>hypothesis</em></td><td>It may be an intentionally requested change — check the spec-change registry first</td></tr>
+<tr><td>Read-only, subagents read-only</td><td>Analysis never mutates repos</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2 id="fix">9. Fix workflow (<code>workflows/fix.md</code>)</h2>
+<p>Defect mode, one item per invocation. Invoking it consents to investigation, sweep and regression steps only.</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  F1["1. Load context: TASKS.md, mistakes, prior analysis<br/>(none → run analyze first)"] --> F2["2. Scope: which repos?<br/>flag-only → describe and stop for that part<br/>cross-repo → developer chooses A/B/C"]
+  F2 --> F3["3. Pre-flight: branch + status -s<br/>(repeat before every edit batch)"]
+  F3 --> F4{"4. Runtime-evidence gate<br/>confidence?"}
+  F4 -->|"HIGH"| F5
+  F4 -->|"MEDIUM"| SUG["Suggest self-test;<br/>developer decides"] --> F5
+  F4 -->|"LOW"| ST["Run self-test first"] --> F5
+  F5["5. Implement: scaffold anchors, root cause not symptom,<br/>structural change first and separately,<br/>ripple defects → A bundle / B defer / C stop"]
+  F5 --> F6["6. Regression analysis: callers, revived code,<br/>invariant partners, recent changes"]
+  F6 --> F7["7. Horizontal sweep (yokoten):<br/>shape-keyed search + known-good control,<br/>tier A / B / C"]
+  F7 --> F75["7.5 Simplicity pass"] --> F8["8. Structured report<br/>(what I need from you first)"]
+  F8 --> F9["9. Offer tests — run only on yes"]
+  F9 --> F95["9.5 Reviewer round (mandatory)"]
+  F95 --> VR{"fix-verifier<br/>REJECTED?"}
+  VR -->|"yes"| F5
+  VR -->|"no"| G{{"Push confirmed?"}}
+  G -->|"yes"| F10["10. Push and PR<br/>docs/git-workflow.md"]
+  G -->|"no"| WAIT["Stop; hand back"]
+  F10 --> F11["11. Record: reports/, TASKS.md Results,<br/>mistakes/ if corrected"]
+</pre></div></details>
+
+<h3>Horizontal sweep tiers (Step 7)</h3>
+<div class="tbl"><table>
+<tr><th>Tier</th><th>Meaning</th><th>Action</th></tr>
+<tr><td>A — exact</td><td>Same fix applies verbatim</td><td>≤8 files → same PR; &gt;8 → split</td></tr>
+<tr><td>B — related</td><td>Similar shape, needs per-site audit</td><td>Separate PRs</td></tr>
+<tr><td>C — architectural</td><td>Needs its own analysis</td><td>New items</td></tr>
+</table></div>
+<p>The search is keyed on the defect's <em>shape</em> (one sentence with zero identifiers), not on names, and the
+same detector is run on a known-good control to measure the noise floor. The developer decides on bundling.</p>
+
+<h3>Reviewer round (Step 9.5)</h3>
+<p>Attacks the <em>claim</em>, not the diff. Copy-only changes get a reduced round; anything touching a condition,
+handler, state, visibility or payload gets the full round.</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  subgraph T1["Prove the claim"]
+    direction LR
+    R1["1. Falsifiable claim<br/>in reporter's terms"] --> R2["2. Paired A/B,<br/>pre-fix control reproduces symptom"]
+    R2 --> R3["3. Assert each<br/>trial executed"] --> R4["4. Drive every<br/>input path"] --> R5["5. Name DB instance<br/>+ log env"]
+  end
+  subgraph T2["Re-check the change and its write-up"]
+    direction LR
+    R6["6. Re-run sweep<br/>with control"] --> R7["7. Re-audit<br/>revived paths"] --> R8["8. Verify PR text<br/>line by line"]
+    R8 --> R9["9. fix-verifier<br/>for cross-layer"] --> R10["10. Evidence artifact<br/>_work/evidence/ID/"]
+  end
+  T1 --> T2
+</pre></div></details>
+
+<!-- ================================================================ -->
+<h2 id="git">10. Git / PR orchestration (<code>docs/git-workflow.md</code>)</h2>
+<p>Shared by every mutating workflow. Runs only after the developer confirms ("push it", "open the PR").
+Steps are not collapsed.</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  G0{{"Developer confirms push / PR"}} --> G1["10.1 Working-tree pre-flight<br/>unrelated changes → S stash / C cancel"]
+  G1 --> G2["10.2 Auth (SSH agent / credential manager)"]
+  G2 --> G3["10.3 Branch namespace/area/item-token"]
+  G3 --> L1["10.3.1 Stage-1 lint: PR-wide auto-fix, once"]
+  L1 --> G4["10.4 Commit per item: stage by name,<br/>header ≤72 chars, never --amend"]
+  G4 --> G5["10.5 Sync: merge-pull integration branch"]
+  G5 -->|"conflict"| STOP["Stop and hand back"]
+  G5 --> L2["10.5.1 Stage-2 lint gate on feature branch<br/>zero errors; fixes = new commit"]
+  L2 --> G6["10.6 Push -u, never force"]
+  G6 -->|"non-fast-forward"| G5
+  G6 --> G7["10.7 gh pr create --base integration --body-file"]
+  G7 --> G8["10.8 URL first line of reply<br/>10.8.5 optional notify"]
+  G8 --> G86["10.8.6 CI checks: failure → new commit,<br/>push needs confirmation"]
+  G86 --> G9["10.9 Back to integration branch, restore stash"] --> G10["10.10 Remove temp auth helpers"]
+</pre></div></details>
+<div class="tbl"><table>
+<tr><th>Convention</th><th>Default</th></tr>
+<tr><td>Branch</td><td><code>fix/&lt;area&gt;/&lt;item-id&gt;</code>, <code>change/&lt;area&gt;/&lt;cr-id&gt;</code>; lowercase <code>[a-z0-9/-]</code></td></tr>
+<tr><td>Commit header</td><td><code>&lt;area&gt;: (&lt;item-token&gt;) &lt;short description&gt;</code>, ≤72 chars</td></tr>
+<tr><td>PR title</td><td><code>[&lt;ITEM-ID&gt;] &lt;short description&gt;</code>, <code>--base</code> always explicit</td></tr>
+<tr><td>Sync</td><td>Merge-pull, never rebase a pushed branch</td></tr>
+<tr><td>Cross-repo</td><td>Run 10.1–10.10 per repo in merge order (API before client); confirm before the second PR</td></tr>
+</table></div>
+<p class="src">Naming is overridden by the workspace map in AGENTS.md §1 once setup has run.</p>
+
+<!-- ================================================================ -->
+<h2 id="review">11. PR review (<code>workflows/review-pr.md</code>)</h2>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart LR
+  V0["0. Read mistakes/INDEX.md"] --> V1["1. Load PR: gh pr view"] --> V2["2. Find the claim<br/>(linked item, prior analysis)"]
+  V2 --> V3{"3. Base branch<br/>matches map?"}
+  V3 -->|"no"| BLK["Blocking"]
+  V3 -->|"yes"| V4["4. Check until the blocking set is found:<br/>claimed behavior, cross-layer, revived code,<br/>callers, parity claims, PR text, guardrails"]
+  V4 --> V5["5. Verify each finding by<br/>constructing the failing input"]
+  V5 --> OUT["Draft review: file:line —<br/>what is wrong, why, how it fails"]
+</pre></div></details>
+<p>Reviews list only merge-blocking problems; a finding that cannot be shown to fail is not listed.</p>
+
+<!-- ================================================================ -->
+<h2 id="build">12. Build &amp; scaffold (greenfield)</h2>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart LR
+  subgraph SC["/scaffold-project"]
+    direction TB
+    a1["1. Plan; confirm stack"] --> a2["2. ADR 0001 stack"] --> a3["3. Repo skeleton"] --> a4["4. Cross-cutting basics"] --> a5["5. Verify scripts + CI"] --> a6["6. Register: --render"] --> a7["7. README.html overview"] --> a8["8. Report"]
+  end
+  subgraph BD["/build"]
+    direction TB
+    b1["1. Plan TASKS.md"] --> b2["2. Spec from template"] --> b3["3. Read context + ADRs"] --> b4["4. Design note<br/>(ADR if costly)"] --> b5["5. Tests first"] --> b6["6. Small commits"] --> b7["7. Cross-layer check"] --> b8["8. Lint, typecheck,<br/>tests, build"] --> b9["9. Simplicity pass +<br/>self-review"] --> b10["10. Report: evidence<br/>per acceptance criterion"] --> b11["11. Record mistakes"]
+  end
+  SC --> BD
+</pre></div></details>
+
+<!-- ================================================================ -->
+<h2 id="port">13. Port a feature (<code>workflows/port-feature.md</code>)</h2>
+<p>Port mode: parity with the reference is the spec. The failure mode it guards against is silently dropping a
+rule the legacy system enforced. Model tier per stage in brackets.</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  P0["0. Read mistakes/INDEX.md"] --> P1["1. Resolve and scope:<br/>every reference file for the area"]
+  P1 --> P2["2. Logic inventory:<br/>one row per rule with reference file:line"]
+  P2 --> P3["3. Pattern extraction from<br/>already-ported areas"]
+  P3 --> P4["4. Gap analysis [deep]:<br/>inventory minus existing implementation"]
+  P4 --> P5["5. Layer split: where each rule lives"]
+  P5 --> P6["6. Generate [standard]"]
+  P6 --> P7{"7. completeness-verifier:<br/>MISSING / WEAKENED / LAYER GAP?"}
+  P7 -->|"gaps"| P6
+  P7 -->|"clean"| P8["8. Deliver [light]: inventory table<br/>with new-code locations, PR draft"]
+</pre></div></details>
+<p>Reference comments are carried over as they are onto the equivalent new code.</p>
+
+<!-- ================================================================ -->
+<h2 id="change">14. Change requests (<code>workflows/change-request.md</code>)</h2>
+<p>Change mode: the request text is the spec; the deliberate divergence is the deliverable.</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  subgraph A1["Part 1 — /analyze-change (read-only)"]
+    direction TB
+    c1["Load request + recorded decisions"] --> c2["Reconstruct requirement"] --> c3{"Layout/UI-only<br/>or functional?"}
+    c3 --> c4["Read current implementation;<br/>reference only for domain semantics"]
+    c4 --> c5["Impact + in-flight collision check"] --> c6["Sweep (report-only)"] --> c7["Acceptance criteria"] --> c8["Estimate, risk:<br/>implement / clarify / out of scope"]
+  end
+  A1 --> AP{{"Functional change approved?"}}
+  AP -->|"no"| R["Refuse to proceed"]
+  AP -->|"yes / UI-only"| B1
+  subgraph B["Part 2 — /implement-change"]
+    direction TB
+    B1["Ask target integration branch (every time)"] --> d2["Apply team style guide"] --> d3["Implement; regression-test shared atoms"] --> d4["Map each criterion to evidence"] --> d5["PR per git-workflow"] --> d6["Developer hand-off checklist"]
+  end
+</pre></div></details>
+
+<!-- ================================================================ -->
+<h2 id="support">15. Supporting workflows</h2>
+<div class="tbl"><table>
+<tr><th>Workflow</th><th>Flow</th><th>Key rule</th></tr>
+<tr><td><code>area-loop</code></td><td><code>analyze-area</code> / <code>fix-area</code> / <code>fix-queue</code>: run analyze or fix Steps 1–8 per item in one warm context → verify-until-green → one review batch → stop at the human push gate → one PR per item</td><td>Autonomous only up to the human gate; no parallelism on a single dev stack; after two nudges an item is marked blocked</td></tr>
+<tr><td><code>db-query</code></td><td>Investigation: identify tables → confirm/refute hypothesis → classify (code / data / environment / inconclusive). Reproducer data: UI invariants → predicates → <code>COUNT(*)</code> reachability → sample by recency → user-facing codes</td><td>SELECT only through the wrapper; data defects are documented and escalated, never corrected</td></tr>
+<tr><td><code>log-triage</code></td><td>Fetch logs → symbolicate → cluster by fingerprint → refresh code state → classify each issue against current code</td><td>Whitelist only with a reason and narrow scope</td></tr>
+<tr><td><code>stakeholder-reply</code></td><td>Load item and status → choose reply shape by category × status → write in the stakeholder's language → translation for the developer → flag claims for review</td><td>Draft only; agents do not post</td></tr>
+<tr><td><code>export</code></td><td>Write trail markdown to <code>reports/</code> with change footprint → integrity pass</td><td>Re-read identifiers from artifacts; credential scan of every written file</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2 id="hooks">16. Guardrail hooks</h2>
+<p>What matters is enforced mechanically, not by memory. The hooks are Claude Code-only; other tools rely on the
+AGENTS.md rules plus their own permission settings.</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart TD
+  T["Agent tool call"] --> K{"Kind?"}
+  K -->|"Edit / Write"| RG1{"repo_guard.py:<br/>file in read-only or<br/>flag-only repo?"}
+  RG1 -->|"yes"| DENY["DENY with reason"]
+  RG1 -->|"no"| PERM["Normal permission prompt / allow"]
+  K -->|"Bash / PowerShell"| RG2{"repo_guard.py:<br/>mutating git in a<br/>read-only repo?"}
+  RG2 -->|"yes"| DENY
+  RG2 -->|"no"| SG{"safe_git_allow.py:<br/>every statement a safe git shape?<br/>(status/log/diff, pull, fetch,<br/>checkout, push to allowed namespace)"}
+  SG -->|"yes"| ALLOW["Auto-allow"]
+  SG -->|"no"| PERM
+  PERM --> RUN["Tool runs"]
+  ALLOW --> RUN
+  RUN -->|"after Edit / Write"| PE{"post_edit_check.py:<br/>syntax OK?"}
+  PE -->|"no"| BACK["Exit 2: error fed back;<br/>agent re-reads and repairs the file"]
+  PE -->|"yes"| DONE["Continue"]
+</pre></div></details>
+<div class="tbl"><table>
+<tr><th>Hook</th><th>Event</th><th>Behavior</th></tr>
+<tr><td><code>repo_guard.py</code></td><td>PreToolUse</td><td>Denies edits in read-only/flag-only repos and mutating git (commit, push, merge, rebase, reset, stash, …) in read-only repos</td></tr>
+<tr><td><code>safe_git_allow.py</code></td><td>PreToolUse</td><td>Auto-allows only safe PR-workflow git shapes; push namespaces from <code>git.push_namespaces</code> (default fix, change, feature). Never denies — everything else falls through to the prompt</td></tr>
+<tr><td><code>post_edit_check.py</code></td><td>PostToolUse</td><td>Syntax-checks .py, .json, .toml, .yml, .js, .sh; also usable as CLI (<code>--all</code>)</td></tr>
+<tr><td>usage-metrics (optional)</td><td>Stop</td><td>Appends to the usage ledger <code>reports/usage.jsonl</code></td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2 id="routing">17. Model routing</h2>
+<p>Tool-neutral tiers: <strong>deep</strong> for reasoning that ships or judges code, <strong>standard</strong> for interactive and
+verifiable work, <strong>light</strong> for formatting. Mechanical sub-stages are dispatched to cheaper subagents; the
+reasoning core is never downgraded. Switching to a higher tier is a manual, per-invocation decision.</p>
+<div class="tbl"><table>
+<tr><th>Unit</th><th>Tier</th><th>Effort</th><th>Rationale</th></tr>
+<tr><td><code>/analyze</code>, <code>/analyze-change</code></td><td>deep</td><td>high</td><td>Root cause under uncertainty</td></tr>
+<tr><td><code>/fix</code>, <code>/implement-change</code></td><td>deep</td><td>high</td><td>Ships code; cross-layer rework is the costly failure</td></tr>
+<tr><td><code>/review-pr</code></td><td>deep</td><td>high</td><td>A missed blocker ships</td></tr>
+<tr><td><code>/build</code>, <code>/scaffold-project</code></td><td>deep</td><td>high</td><td>New code and structure later work builds on</td></tr>
+<tr><td><code>/port-feature</code></td><td>deep</td><td>high</td><td>Silent rule omission is the failure mode</td></tr>
+<tr><td><code>/area-loop</code></td><td>deep</td><td>high</td><td>Wraps analyze/fix</td></tr>
+<tr><td><code>/maintain-context</code></td><td>deep</td><td>high</td><td>Edits files that shape every future session</td></tr>
+<tr><td><code>fix-verifier</code>, <code>completeness-verifier</code></td><td>deep</td><td>high</td><td>The adversarial safety net</td></tr>
+<tr><td><code>/log-triage</code>, <code>/db-query</code></td><td>standard</td><td>medium</td><td>Mechanical clustering / interactive SQL</td></tr>
+<tr><td><code>/repo-overview</code></td><td>standard</td><td>medium</td><td>Documents existing files; facts traced, diagrams render-checked</td></tr>
+<tr><td><code>/stakeholder-reply</code>, <code>/adr</code></td><td>standard</td><td>medium</td><td>Drafting; external text needs accuracy</td></tr>
+<tr><td>Ad-hoc chat</td><td>standard</td><td>medium</td><td>Workhorse floor</td></tr>
+<tr><td><code>/export</code>, metrics, <code>item-scaffolder</code>, <code>report-formatter</code></td><td>light</td><td>—</td><td>Assemble/format existing content</td></tr>
+</table></div>
+<p class="src">Source: <code>claude-config/model-routing.md</code>. Audit actual-vs-intended tier regularly — routing drifts silently.</p>
+
+<!-- ================================================================ -->
+<h2 id="learning">18. Learning loop: mistakes → rules</h2>
+<p>Every correction becomes durable knowledge so the same mistake is not made twice.</p>
+<details class="diagram" open><summary>Diagram</summary><div class="viewport" tabindex="0"><pre class="mermaid">
+flowchart LR
+  T["Task starts"] --> RI["Read mistakes/INDEX.md;<br/>apply matching files' Rule + Check"]
+  RI --> W["Work"]
+  W --> C{"Corrected?<br/>reviewer, developer, invalid trial,<br/>retracted root cause, lost round"}
+  C -->|"no"| E["Report: mistake files applied"]
+  C -->|"yes"| U["Update existing class file<br/>or add a new one + INDEX line"]
+  U --> E
+  E --> MC["/maintain-context<br/>(monthly / after rework-heavy week)"]
+  MC --> P{"Class with 3+ occurrences<br/>or high severity?"}
+  P -->|"yes"| PR["Propose promoting its rule into<br/>AGENTS.md or a workflow step"]
+  PR --> DEV{{"Developer approves diff"}}
+  DEV --> T
+  P -->|"no"| T
+</pre></div></details>
+<div class="tbl"><table>
+<tr><th>Goes in</th><th>What</th></tr>
+<tr><td><code>mistakes/</code></td><td>A mistake the agent made — generalized, blameless, with Rule and Check</td></tr>
+<tr><td><code>docs/verification-guide.md</code>, <code>context/</code></td><td>Environment facts and tool recipes</td></tr>
+<tr><td><code>docs/lessons-catalog.md</code></td><td>Failure modes the workflows are built to prevent</td></tr>
+<tr><td><code>reports/</code></td><td>Item narratives</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2 id="other">19. Using it with other agents</h2>
+<div class="tbl"><table>
+<tr><th>Agent</th><th>Reads</th><th>Commands &amp; hooks</th></tr>
+<tr><td>Claude Code</td><td><code>CLAUDE.md</code> → <code>AGENTS.md</code></td><td>Slash commands, subagents, guardrail hooks</td></tr>
+<tr><td>Codex, Cursor, Copilot agents</td><td><code>AGENTS.md</code> natively</td><td>Ask the agent to "follow <code>workflows/fix.md</code> for item 123"; mirror <code>.claude/settings.json</code> permissions in the tool</td></tr>
+<tr><td>Gemini CLI</td><td><code>GEMINI.md</code> → <code>AGENTS.md</code></td><td>Same as above</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2 id="principles">20. Design principles</h2>
+<div class="tbl"><table>
+<tr><th>Principle</th><th>How the workspace applies it</th></tr>
+<tr><td>Rules in AGENTS.md, facts in context/, procedures in workflows/</td><td>Only AGENTS.md is always loaded; everything else is read on demand</td></tr>
+<tr><td>Enforce what matters with hooks, not memory</td><td>Editing a read-only repo or force-pushing is blocked mechanically</td></tr>
+<tr><td>Adversarial verification before anything leaves the machine</td><td>Reviewer round, cross-layer verifier, evidence artifact</td></tr>
+<tr><td>Cheap tiers for mechanical stages, deep tier for reasoning</td><td>Routing catalog plus drift audit</td></tr>
+<tr><td>Lessons become rules</td><td><code>mistakes/</code>, <code>docs/lessons-catalog.md</code> and <code>/maintain-context</code></td></tr>
+</table></div>
+<p>Notes: prefer cloning into <code>repos/</code> so the config is portable across teammates. Setup never modifies your
+project repos; if a repo ships its own <code>AGENTS.md</code>/<code>CLAUDE.md</code>, setup links to it.</p>
+
+<h2 id="license">License</h2>
+<p>MIT — see <a href="LICENSE">LICENSE</a>.</p>
+
+</div>
+<div class="float-bar">
+  <button id="to-top" class="icon" type="button" title="Scroll to top" aria-label="Scroll to top" hidden>&uarr;</button>
+  <button id="theme-toggle" class="icon" type="button"></button>
+  <button id="toggle-all" class="icon" type="button"></button>
+</div>
+<script>
+  (() => {
+    const root = document.documentElement;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const themeBtn = document.getElementById("theme-toggle");
+    const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : media.matches;
+    const syncTheme = () => {
+      const label = isDark() ? "Switch to light mode" : "Switch to dark mode";
+      themeBtn.textContent = isDark() ? "☀" : "☾";
+      themeBtn.title = label;
+      themeBtn.setAttribute("aria-label", label);
+    };
+    themeBtn.addEventListener("click", () => {
+      const next = isDark() ? "light" : "dark";
+      root.dataset.theme = next;
+      try { localStorage.setItem("theme", next); } catch (e) {}
+      syncTheme();
+      document.dispatchEvent(new Event("themechange"));
+    });
+    media.addEventListener("change", () => {
+      if (root.dataset.theme) return;
+      syncTheme();
+      document.dispatchEvent(new Event("themechange"));
+    });
+    syncTheme();
+
+    const all = [...document.querySelectorAll("details.diagram")];
+    const btn = document.getElementById("toggle-all");
+    const sync = () => {
+      const anyOpen = all.some(d => d.open);
+      const label = anyOpen ? "Collapse all diagrams" : "Expand all diagrams";
+      btn.textContent = anyOpen ? "⊟" : "⊞";
+      btn.title = label;
+      btn.setAttribute("aria-label", label);
+    };
+    btn.addEventListener("click", () => { const open = !all.some(d => d.open); all.forEach(d => { d.open = open; }); sync(); });
+    all.forEach(d => d.addEventListener("toggle", sync));
+    sync();
+
+    const top = document.getElementById("to-top");
+    const syncTop = () => { top.hidden = window.scrollY < 300; };
+    top.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+    window.addEventListener("scroll", syncTop, { passive: true });
+    syncTop();
+  })();
+</script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  const MIN = 0.1, MAX = 4, STEP = 1.2;
+  const MAX_BOX = 0.6, MIN_BOX_PX = 280;
+  let hovered = null;
+
+  const isDark = () => {
+    const t = document.documentElement.dataset.theme;
+    return t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  };
+  const fitScale = d => Math.min(1, d.vp.clientWidth / d.nw, d.vp.clientHeight / d.nh);
+
+  // Zoom keeping the point under (x, y) — viewport coordinates — fixed on screen.
+  function zoomTo(d, scale, x, y) {
+    scale = Math.min(MAX, Math.max(MIN, scale));
+    const r = d.vp.getBoundingClientRect();
+    const ax = x === undefined ? d.vp.clientWidth / 2 : x - r.left;
+    const ay = y === undefined ? d.vp.clientHeight / 2 : y - r.top;
+    const cx = (d.vp.scrollLeft + ax) / d.scale, cy = (d.vp.scrollTop + ay) / d.scale;
+    d.scale = scale;
+    d.svg.style.width = d.nw * scale + "px";
+    d.vp.scrollLeft = cx * scale - ax;
+    d.vp.scrollTop = cy * scale - ay;
+    d.label.textContent = Math.round(scale * 100) + "%";
+  }
+
+  function init(det) {
+    const vp = det.querySelector(".viewport");
+    const pre = vp.querySelector("pre.mermaid");
+
+    const bar = document.createElement("div");
+    bar.className = "zoombar";
+    bar.innerHTML = '<button type="button" data-z="out" title="Zoom out (Ctrl -)">−</button>' +
+      '<span class="zl"></span>' +
+      '<button type="button" data-z="in" title="Zoom in (Ctrl +)">+</button>' +
+      '<button type="button" data-z="fit" title="Fit to box (Ctrl 0)">Fit</button>' +
+      '<button type="button" data-z="one" title="Actual size">1:1</button>';
+    det.insertBefore(bar, vp);
+
+    const d = { det, vp, pre, src: pre.innerHTML, svg: null, nw: 0, nh: 0, scale: 1, sized: false, label: bar.querySelector(".zl") };
+    bar.addEventListener("click", e => {
+      if (!d.svg) return;
+      const z = e.target.closest("button")?.dataset.z;
+      if (z === "in") zoomTo(d, d.scale * STEP);
+      else if (z === "out") zoomTo(d, d.scale / STEP);
+      else if (z === "fit") zoomTo(d, fitScale(d));
+      else if (z === "one") zoomTo(d, 1);
+    });
+
+    vp.addEventListener("mouseenter", () => { hovered = d; });
+    vp.addEventListener("mouseleave", () => { if (hovered === d) hovered = null; });
+    vp.addEventListener("focus", () => { hovered = d; });
+    vp.addEventListener("wheel", e => {
+      if (!(e.ctrlKey || e.metaKey) || !d.svg) return;
+      e.preventDefault();
+      zoomTo(d, d.scale * (e.deltaY < 0 ? STEP : 1 / STEP), e.clientX, e.clientY);
+    }, { passive: false });
+
+    vp.addEventListener("pointerdown", e => {
+      if (e.pointerType !== "mouse" || e.button !== 0) return;
+      const sx = e.clientX, sy = e.clientY, sl = vp.scrollLeft, st = vp.scrollTop;
+      vp.setPointerCapture(e.pointerId);
+      vp.classList.add("panning");
+      const move = ev => {
+        vp.scrollLeft = sl - (ev.clientX - sx);
+        vp.scrollTop = st - (ev.clientY - sy);
+      };
+      const up = () => { vp.removeEventListener("pointermove", move); vp.classList.remove("panning"); };
+      vp.addEventListener("pointermove", move);
+      vp.addEventListener("pointerup", up, { once: true });
+      vp.addEventListener("pointercancel", up, { once: true });
+    });
+    return d;
+  }
+
+  // Bind a freshly rendered SVG; size the box only on the first render.
+  function attach(d) {
+    const svg = d.vp.querySelector("svg");
+    if (!svg) return;
+    const vb = svg.viewBox.baseVal;
+    d.svg = svg;
+    d.nw = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    d.nh = vb && vb.height ? vb.height : svg.getBoundingClientRect().height;
+    svg.style.maxWidth = "none";
+    svg.style.height = "auto";
+    if (d.sized) {
+      svg.style.width = d.nw * d.scale + "px";
+      d.vp.scrollLeft = d.saved[0];
+      d.vp.scrollTop = d.saved[1];
+      return;
+    }
+    const widthFitH = d.nh * Math.min(1, d.vp.clientWidth / d.nw);
+    const boxH = Math.min(Math.max(widthFitH, Math.min(d.nh, MIN_BOX_PX)), window.innerHeight * MAX_BOX);
+    d.vp.style.height = Math.ceil(boxH) + 4 + "px";
+    d.sized = true;
+    zoomTo(d, fitScale(d));
+  }
+
+  const items = [...document.querySelectorAll("details.diagram")].map(init);
+
+  // Mermaid measures text, so collapsed diagrams are opened while rendering.
+  async function render() {
+    mermaid.initialize({ startOnLoad: false, theme: isDark() ? "dark" : "default", flowchart: { htmlLabels: true } });
+    const closed = items.filter(d => !d.det.open);
+    closed.forEach(d => { d.det.open = true; });
+    items.forEach(d => {
+      d.saved = [d.vp.scrollLeft, d.vp.scrollTop];
+      d.pre.removeAttribute("data-processed");
+      d.pre.innerHTML = d.src;
+    });
+    await mermaid.run({ nodes: items.map(d => d.pre) });
+    items.forEach(attach);
+    closed.forEach(d => { d.det.open = false; });
+  }
+
+  await render();
+  document.addEventListener("themechange", render);
+
+  document.addEventListener("keydown", e => {
+    if (!(e.ctrlKey || e.metaKey) || !hovered || !hovered.svg || !hovered.det.open) return;
+    if (e.key === "+" || e.key === "=") { e.preventDefault(); zoomTo(hovered, hovered.scale * STEP); }
+    else if (e.key === "-" || e.key === "_") { e.preventDefault(); zoomTo(hovered, hovered.scale / STEP); }
+    else if (e.key === "0") { e.preventDefault(); zoomTo(hovered, fitScale(hovered)); }
+  });
+</script>
+</body>
+</html>

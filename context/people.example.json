@@ -1,0 +1,6 @@
+{
+  "people": [
+    {"name": "Ana", "role": "dev", "aliases": ["ana.reyes@example.com", "ana.reyes", "areyes"]},
+    {"name": "Ben", "role": "tester", "aliases": ["ben.cruz@example.com", "bcruz"]}
+  ]
+}
