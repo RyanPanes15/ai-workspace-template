@@ -10,8 +10,12 @@ regression steps. **Tests, push and PR each still need an explicit "yes".**
 
 ### Step 1 — Load context
 Create `_work/runs/<ID>/TASKS.md` listing every step below that applies (AGENTS.md
-§5); tick items as you go. Read `mistakes/INDEX.md` and open matching files (AGENTS.md §10). Load the item record and the prior analysis trail (this session or
-`reports/<ID>-analysis.md`). If none exists, run `workflows/analyze.md` first.
+§5); tick items as you go. Read `mistakes/INDEX.md` and open matching files (AGENTS.md §10).
+Load the item record and the prior analysis trail from **`reports/<ID>-analysis.md`**
+— the default is a cold start in a fresh session, with the trail as the handoff; the
+transcript of an earlier analysis in this session is a convenience, not the source.
+If no trail exists, run `workflows/analyze.md` first (it writes one). Every anchor in
+the trail is re-verified in Step 5.0 before it is used.
 
 ### Step 2 — Scope
 Which repos? Routing default: UI → frontend repo; data/logic → backend repo; both →
@@ -101,9 +105,11 @@ reviewer round, not after. Skip for obvious one-line fixes.
 9.5) · commit/PR drafts · next steps. May dispatch `report-formatter` (light).
 
 ### Step 9 — Offer tests
-Offer; run only on "yes". Confirm the tool actually ran (for lint, `modules/lint-gate`
-refuses the vacuous cases) (not a fetch-and-exit, not a
-truncated tail, correct branch argument).
+Offer; run only on "yes". Run them through `test-runner` (light) using the **Quiet
+commands** in `context/repos/<name>.md`: only failures and the executed counts enter
+this context, never the full log. Confirm the tool actually ran (`ran=` > 0, correct
+files, correct branch; for lint, `modules/lint-gate` refuses the vacuous cases) — a
+clean exit with nothing executed is not a pass.
 
 ### Step 9.5 — Reviewer round (mandatory before push)
 **Size it to the change.** Copy-only changes (labels, message text, captions, headers,
@@ -148,8 +154,10 @@ lint gate (feature branch as argument) → push → `gh pr create --base <integr
 stash → delete temp auth helpers. Cross-repo: per repo, in merge order.
 
 ### Step 11 — Record (best-effort)
-Update tracking/metrics if the module is enabled; append to `reports/<ID>-analysis.md`;
-close `TASKS.md` with its *Results* section.
+Update tracking/metrics if the module is enabled; append a dated section to
+`reports/<ID>-analysis.md`; record the outcome (`usage_tracker.py --outcome <ID> …`,
+see `workflows/export.md`); close `TASKS.md` with its *Results* section. End with
+the handoff line for the next task (`/clear` first).
 If the reviewer round, the developer, or a test caught something you got wrong in this
 item, update or add the matching `mistakes/` file now (AGENTS.md §10).
 

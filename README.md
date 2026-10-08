@@ -16,8 +16,8 @@ workflows/                tool-neutral procedures (build, scaffold-project, anal
                           stakeholder-reply, change-request, port-feature, area-loop,
                           maintain-context, repo-overview)
 claude-config/ → .claude/  (installed by setup)
-  commands/               slash-command wrappers → workflows (model/effort pinned)
-  agents/                 item-scaffolder, report-formatter, fix-verifier, completeness-verifier
+  commands/               slash-command wrappers → workflows (effort pinned; model = session shape)
+  agents/                 item-scaffolder, report-formatter, test-runner, fix-verifier, completeness-verifier
   hooks/                  repo_guard.py (enforces read-only/flag-only repos),
                           safe_git_allow.py (auto-allows only safe PR-workflow git)
   skills/setup-workspace/ conversational setup

@@ -22,13 +22,17 @@ Read `mistakes/INDEX.md` first and open matching files (AGENTS.md §10).
 7. **In-flight collision check:** open branches/PRs touching the same files
    (`git diff origin/<a>...origin/<b> -- <files>` across integration branches).
 8. Sweep: where else the same change pattern belongs (report-only).
+9. Write the trail: append the Part 1 output as a dated section to
+   `reports/<CR-id>-analysis.md` — Part 2 starts cold from it in a fresh session
+   (`/clear`, then `/implement-change`), never from this transcript.
 9. Draft **acceptance criteria** (Given/When/Then or checklist), one per change.
 10. Estimate + risk; recommendation: implement / clarify / out of scope.
 11. A conflict with an earlier requested-and-shipped change is a **requester-side
     contradiction** → a question, not a defect.
 
 ## Part 2 — Implement (`/implement-change CR-<n>@<area>`)
-1. Load the Part 1 output; refuse to proceed on a functional change without recorded
+1. Load the Part 1 output from `reports/<CR-id>-analysis.md` (re-verify every anchor);
+   refuse to proceed on a functional change without recorded
    approval.
 2. **Ask the target integration branch every time** (bases can diverge per team);
    record any cherry-pick plan.

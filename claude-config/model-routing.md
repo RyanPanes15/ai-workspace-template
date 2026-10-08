@@ -1,21 +1,53 @@
 # Model Routing Catalog
 
-Source of truth for which tier each unit runs on. The catalog **justifies**; command
-and agent frontmatter **enforces**. Keep them in sync — drift is silent.
+Source of truth for which tier each unit runs on. The catalog **justifies**; the
+**session shape** (`CLAUDE.md` §Session shapes) plus each deep command's tier gate
+**selects** the model; command frontmatter pins **effort** only; the usage ledger
+(`modules/usage-metrics`) **audits** actual against intended. Drift is silent — audit.
 
 Tiers are tool-neutral. Claude mapping: **deep = opus**, **standard = sonnet**,
 **light = haiku**. Use aliases, not pinned model IDs, so routing survives upgrades.
 Other tools: map deep/standard/light to your provider's equivalents.
 
+## Why the model is not pinned per command
+
+The prompt cache is per model and matches from the first token. A command whose
+frontmatter names a different model is a model switch for that turn: the whole
+conversation is re-read with no cache hits, and again when the session model resumes
+on the next prompt. The cost scales with the context at that moment, so a `/fix` after
+an hour of chat is the most expensive possible way to start a fix. Subagents are
+different: each has its own context and cache, so their frontmatter `model` is free.
+
+Effort pins stay on commands: on current models (Opus 5.5, Sonnet 5.5, Haiku 5.5,
+Fable 5.1, with an API key or subscription) an effort change keeps the cache. On older
+models, Bedrock, Google Cloud's Agent Platform or an apps gateway it does not — there,
+set effort once per session and expect a command's `effort:` to cost one re-read.
+
+## Session shapes
+
+Set at turn 1, after `/clear`, in both directions — `/clear` is not documented to
+reset the model, so a triage session after a deep one needs `/model sonnet` too.
+`/model` saves to user settings unless applied with `s`; the project `settings.json`
+`model` outranks that saved value at the next startup (settings precedence: project
+above user), so a leak is within one CLI process only.
+
+| Shape | Model · effort | Units |
+| --- | --- | --- |
+| Deep | opus · high | `/analyze`, `/analyze-change`, `/fix`, `/implement-change`, `/review-pr`, `/port-feature`, `/build`, `/scaffold-project`, `/area-loop`, `/maintain-context` |
+| Triage (floor) | sonnet · medium | `/log-triage`, `/db-query`, `/stakeholder-reply`, `/adr`, `/repo-overview`, `/setup-workspace`, `/export`, ad-hoc chat |
+
+Light units (`/export`, metrics, formatting) run at the session's model and dispatch
+their writing to a light subagent, so the cheap tier is kept in either shape.
+
 ## Catalog
 
 | Unit | Tier | Effort | Rationale |
 | --- | --- | --- | --- |
-| `/export`, metrics, `item-scaffolder`, `report-formatter` | light | — | assemble/format existing content; deterministic |
+| `/export`, metrics, `item-scaffolder`, `report-formatter`, `test-runner` | light | — | assemble/format/run existing content; deterministic |
 | `/log-triage` | standard | medium | clustering is mechanical; per-issue code check is verifiable |
 | `/db-query` | standard | medium | interactive SQL; escalate hard reproducer searches |
 | `/stakeholder-reply` | standard | medium | short, but external text — accuracy gate vetoes light |
-| ad-hoc chat (session default) | standard | medium | workhorse floor; bump manually for hard ad-hoc work |
+| ad-hoc chat (session default) | standard | medium | workhorse floor; hard ad-hoc work gets a deep session, not a mid-session switch |
 | `/analyze`, `/analyze-change` | deep | high | root cause under uncertainty |
 | `/review-pr` | deep | high | adversarial merge-blocking review; a missed blocker ships |
 | `/fix`, `/implement-change` | deep | high | ships code; cross-layer rework is the costly failure |
@@ -30,11 +62,13 @@ Other tools: map deep/standard/light to your provider's equivalents.
 ## Stage-level dispatch
 
 Deep workflows keep a deep base (the reasoning core is never downgraded) and send
-only mechanical stages to cheaper subagents:
+only mechanical stages to cheaper subagents, whose output is the only thing that enters
+the main context:
 
 - analyze: load/enum/translate → `item-scaffolder` (light); per-cluster analysis →
   parallel read-only subagents at the **same** tier; report → `report-formatter`.
 - fix: anchor re-verification + edit specs → read-only subagents (standard);
+  tests / lint / build runs → `test-runner` (light, failures + counts only);
   cross-layer check → `fix-verifier` (deep); report → `report-formatter`; git/PR
   orchestration inline (tool calls, not reasoning).
 - port: pattern extraction + scaffolding → standard; inventory, logic drafting,
@@ -45,10 +79,23 @@ only mechanical stages to cheaper subagents:
 - Effort and tier are orthogonal dials. Steady state: deep @ high, standard @
   medium, light @ n/a (some light models ignore effort).
 - **Don't starve agentic units** — higher effort up front often cuts turn count and
-  total cost. Savings come from the standard/light units and the session floor.
-- `ultrathink` deepens one turn. Escalating to a higher tier is a manual,
-  per-invocation decision for: returned-for-rework items, cross-repo + cross-layer
-  fixes, hypotheses already refuted once, genuinely ambiguous multi-area batches.
+  total cost. Savings come from the standard/light units and the session floor. The
+  price-sheet gap between tiers shrinks in long sessions (cache reads dominate); what
+  decides cost per finished item is turns to finish, so judge routing by cost per
+  passed item in the ledger, not by the price sheet.
+- `ultrathink` deepens one turn without a model switch (likely cache-safe; verify).
+
+## Escalation
+
+Triggers: returned-for-rework items, cross-repo + cross-layer fixes, a hypothesis
+already refuted once, a first failed real check (compile, first test, wrong files),
+genuinely ambiguous multi-area batches. Decide **early**, while the context is small.
+
+How: **new session + trail**, never the transcript. Write the handoff (the item, the
+verdict so far, the failing check, the files that matter, open questions) to
+`reports/<ID>-analysis.md` or `_work/runs/<task>/HANDOFF.md`, tell the developer, and
+let them `/clear` into a deep session. If a mid-session switch is unavoidable,
+`/compact` first so the re-read is small.
 
 ## Fallback
 
@@ -60,7 +107,9 @@ only mechanical stages to cheaper subagents:
 
 ## Audit
 
-If `modules/usage-metrics` is enabled, compare actual per-unit model share against
-this table weekly. A standard-tier session default can still end up running almost
-everything on deep (manual `/model` switches persist across turns) — the ledger is
-the only place that shows it.
+If `modules/usage-metrics` is enabled, run `usage_tracker.py --report` weekly and
+compare against this table: per-unit model share (a deep command that ran on sonnet
+means a skipped tier gate), **cache-read share** per session and user (low = the
+prefix keeps breaking: switches or long gaps), **cold requests** per command (model
+flips), and context growth per session (an ever-climbing curve = a session that
+should have been cleared). The ledger is the only place that shows it.

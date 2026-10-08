@@ -160,8 +160,38 @@ def detect_git(path):
             "default_branch": head.split("/", 1)[1] if "/" in head else run(["git", "branch", "--show-current"], cwd=path)}
 
 
+QUIET_BY_FILE = {
+    "pyproject.toml": ["`pytest -q -x --no-header -p no:cacheprovider <file>` — one file, stop at first failure",
+                       "`ruff check --output-format=concise .` — lint, one line per finding"],
+    "requirements.txt": ["`pytest -q -x --no-header <file>` — one file, stop at first failure"],
+    "go.mod": ["`go test ./... 2>&1 | grep -v '^ok'` — failures only", "`go vet ./...`"],
+    "Cargo.toml": ["`cargo test -q 2>&1 | grep -v 'ok$'` — failures only"],
+    "pom.xml": ["`mvn -q -Dsurefire.printSummary=false test` — quiet; failures still print"],
+    "build.gradle": ["`gradle test -q` — quiet; failures still print"],
+    "build.gradle.kts": ["`gradle test -q` — quiet; failures still print"],
+}
+
+
+def quiet_node(deps):
+    """Failures-only invocations for the detected Node tooling (flags to confirm per repo)."""
+    q = []
+    if "vitest" in deps:
+        q.append("`npx vitest run <file> --reporter=dot` — one file, dots only")
+    if "jest" in deps:
+        q.append("`npx jest <file> --silent --reporters=summary` — one file, summary only")
+    if "mocha" in deps:
+        q.append("`npx mocha <file> --reporter dot`")
+    if "@playwright/test" in deps or "playwright" in deps:
+        q.append("`npx playwright test <file> --reporter=dot`")
+    if "eslint" in deps:
+        q.append("`npx eslint <files> --quiet -f unix` — errors only, one line each")
+    if "typescript" in deps:
+        q.append("`npx tsc --noEmit --pretty false` — errors only, one line each")
+    return q
+
+
 def detect_stack(path):
-    stack, cmds = [], []
+    stack, cmds, quiet = [], [], []
     pj = path / "package.json"
     if pj.exists():
         try:
@@ -176,6 +206,7 @@ def detect_stack(path):
             for s in ("dev", "start", "build", "test", "lint", "lint:fix", "format", "test:integration", "typecheck"):
                 if s in d.get("scripts", {}):
                     cmds.append(f"`npm run {s}` → `{d['scripts'][s]}`")
+            quiet += quiet_node(deps)
         except Exception:
             stack.append("Node (package.json unreadable)")
     for f, label in [("pom.xml", "Java/Maven"), ("build.gradle", "Java/Gradle"), ("build.gradle.kts", "Kotlin/Gradle"),
@@ -184,8 +215,10 @@ def detect_stack(path):
                      ("Gemfile", "Ruby"), ("pubspec.yaml", "Dart/Flutter")]:
         if (path / f).exists():
             stack.append(label)
+            quiet += QUIET_BY_FILE.get(f, [])
     if list(path.glob("*.sln")) or list(path.glob("*.csproj")) or list(path.glob("src/**/*.csproj"))[:1]:
         stack.append(".NET / C#")
+        quiet.append("`dotnet test --nologo -v q --filter <Name>` — quiet; failures still print")
     sql = list(path.glob("**/*.sql"))[:1] or list(path.glob("**/*.ddl"))[:1]
     if sql:
         stack.append("SQL files present")
@@ -193,7 +226,7 @@ def detect_stack(path):
         if (path / f).exists():
             cmds.append(f"`{f}` present")
     own = [f for f in ("AGENTS.md", "CLAUDE.md", ".cursorrules", ".github/copilot-instructions.md") if (path / f).exists()]
-    return stack, cmds, own
+    return stack, cmds, own, quiet
 
 
 # ───────────────────────── project profiles ─────────────────────────
@@ -469,8 +502,8 @@ def enrich(cfg):
         if r.get("policy") in ("editable", "pr-only"):
             r.setdefault("integration_branch", g.get("default_branch") or "develop")
             r.setdefault("protected_branches", sorted({"main", "master", r["integration_branch"]}))
-        stack, cmds, own = detect_stack(path)
-        r["_stack"], r["_cmds"], r["_own"] = stack, cmds, own
+        stack, cmds, own, quiet = detect_stack(path)
+        r["_stack"], r["_cmds"], r["_own"], r["_quiet"] = stack, cmds, own, quiet
 
 
 def render_map(cfg):
@@ -534,11 +567,13 @@ def render_context(r):
     if r.get("_own"):
         stack += "\n- Repo ships its own agent instructions: " + ", ".join(f"`{o}`" for o in r["_own"]) + " — read them too."
     cmds = "\n".join(f"- {c} (detected)" for c in r.get("_cmds", [])) or "- <fill in: dev, build, test, lint>"
+    quiet = "\n".join(f"- {q} (detected — confirm the flags)" for q in r.get("_quiet", [])) or (
+        "- <fill in: one test file with a dot/summary reporter; lint errors only; typecheck errors only>")
     vals = {"name": r["name"], "role_label": ROLES.get(r["role"], ("?",))[0], "policy": r["policy"],
             "path": r["path"], "remote": r.get("remote") or "—",
             "integration_branch": r.get("integration_branch", "—"),
             "protected_branches": ", ".join(r.get("protected_branches", [])) or "—",
-            "detected_stack": stack, "detected_commands": cmds}
+            "detected_stack": stack, "detected_commands": cmds, "quiet_commands": quiet}
     out = tpl
     for k, v in vals.items():
         out = out.replace("{{" + k + "}}", v)

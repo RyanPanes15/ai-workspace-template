@@ -30,6 +30,13 @@ Goal: turn thousands of log lines into a short list of distinct problems, each m
    - A null/empty-parameter validation error usually has a client-side cause (a value
      coerced to empty before the request) — name the likely caller via
      `area_index.py --callers`.
+5b. **Escalation gate (early, not late).** This runs on the standard tier. The
+   moment an issue needs real root-cause work — the top frame refutes the first
+   suspected cause, the cause spans client + server, or the code at HEAD does not
+   match the stack — stop investigating that issue here. Write what is known
+   (fingerprint, frame, env, refuted hypothesis, files to open) into the drafted
+   ticket and recommend `/analyze` in a deep session. Never keep looping on the
+   standard tier, and never switch model mid-session.
 6. **QUIET** issues (seen before, absent now) are not fixed until code says so — list
    them separately.
 7. **Whitelist** only with a reason and a narrow scope (`--mute <fp> --note "…"`);

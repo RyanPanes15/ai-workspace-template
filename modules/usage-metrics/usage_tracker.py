@@ -9,8 +9,9 @@ Install: setup/setup_workspace.py adds it to .claude/settings.local.json when th
 module is enabled. Then restart the agent (or open /hooks once).
 
 CLI:
-  python modules/usage-metrics/usage_tracker.py --report        # per-command / per-item totals
-  python modules/usage-metrics/usage_tracker.py --report --by model|item|user
+  python modules/usage-metrics/usage_tracker.py --report        # per-command totals + cache signals
+  python modules/usage-metrics/usage_tracker.py --report --by model|item|user|session
+  python modules/usage-metrics/usage_tracker.py --outcome <ID> pass|fail|open   # per-item verdict ($/pass)
   python modules/usage-metrics/usage_tracker.py --check         # heartbeat: is the hook actually recording?
   python modules/usage-metrics/usage_tracker.py --coverage --ledgers a.jsonl b.jsonl [--since 2026-09-01]
         # team roll-up: who in context/people.json has NO ledger lines (silent install failure)
@@ -20,7 +21,17 @@ context/people.json when present.
 
 Rates (USD per 1M tokens) come from workspace.config.json -> usage_metrics.rates,
 keyed by model family substring ("opus", "sonnet", "haiku", ...). They are
-estimates for comparison, not billing.
+estimates for comparison, not billing. DEFAULT_RATES follow the public price sheet as
+of 2026-09 (cache read = 0.1x input, cache write = 1.25x input); verify against
+claude.com/pricing and override in the config when the sheet changes.
+
+Signals the report derives per key (command / item / user / session):
+  cache%   share of input tokens read from cache — low = the prefix keeps breaking
+  cold/req requests where cache writes exceeded cache reads (model/effort switch,
+           expired cache, or a fresh session) — many per command = mid-session flips
+  ctx_max  largest single request seen — a curve that only climbs is a session that
+           should have been cleared
+  $/pass   (--by model) cost per item marked `pass` via --outcome; failed attempts count
 """
 import collections
 import datetime
@@ -32,7 +43,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER = ROOT / "reports" / "usage.jsonl"
 DEFAULT_RATES = {"opus": {"in": 5, "out": 25, "cache_read": 0.5, "cache_write": 6.25},
-                 "sonnet": {"in": 3, "out": 15, "cache_read": 0.3, "cache_write": 3.75},
+                 "sonnet": {"in": 2, "out": 10, "cache_read": 0.2, "cache_write": 2.5},
                  "haiku": {"in": 1, "out": 5, "cache_read": 0.1, "cache_write": 1.25}}
 
 
@@ -116,6 +127,7 @@ def hook():
     tok = collections.Counter()
     cost = collections.Counter()
     seen = set()
+    requests = cold = ctx_max = 0
     for e in turn:
         msg = e.get("message") or {}
         u = msg.get("usage")
@@ -130,10 +142,14 @@ def hook():
         for k, v in parts.items():
             tok[k] += v
             cost[fam] += v * r.get(k, 0) / 1e6
+        requests += 1
+        cold += parts["cache_write"] > parts["cache_read"]
+        ctx_max = max(ctx_max, parts["in"] + parts["cache_read"] + parts["cache_write"])
     t0, t1 = ts(turn[0]), ts(turn[-1])
-    rec = {"v": 1, "date": datetime.date.today().isoformat(), "session_id": payload.get("session_id"),
-           "user": current_user(),
+    rec = {"v": 2, "type": "turn", "date": datetime.date.today().isoformat(),
+           "session_id": payload.get("session_id"), "user": current_user(),
            "command": cmd, "items": items, "tokens": dict(tok),
+           "requests": requests, "cold_requests": cold, "ctx_max": ctx_max,
            "cost_by_model": {k: round(v, 4) for k, v in cost.items()},
            "cost_usd": round(sum(cost.values()), 4),
            "wall_seconds": round((t1 - t0).total_seconds()) if t0 and t1 else None,
@@ -143,23 +159,116 @@ def hook():
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
 
-def report(by):
+def ledger_lines():
     if not LEDGER.exists():
         sys.exit("No ledger yet.")
-    agg = collections.defaultdict(lambda: [0, 0.0])
-    for l in LEDGER.read_text(encoding="utf-8").splitlines():
-        r = json.loads(l)
-        if by == "model":
-            for m, c in r["cost_by_model"].items():
+    rows = [json.loads(l) for l in LEDGER.read_text(encoding="utf-8").splitlines() if l.strip()]
+    turns = [r for r in rows if r.get("type", "turn") == "turn"]
+    outcomes = {r["item"]: r["outcome"] for r in rows if r.get("type") == "outcome"}
+    return turns, outcomes
+
+
+def outcome(item, value):
+    if value not in ("pass", "fail", "open"):
+        sys.exit("outcome must be pass | fail | open")
+    rec = {"v": 2, "type": "outcome", "date": datetime.date.today().isoformat(),
+           "user": current_user(), "item": item, "outcome": value}
+    LEDGER.parent.mkdir(parents=True, exist_ok=True)
+    with LEDGER.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    print(f"recorded {item}: {value}")
+
+
+def _acc():
+    return {"turns": 0, "cost": 0.0, "in": 0, "read": 0, "write": 0, "req": 0, "cold": 0, "ctx": [], "cmds": []}
+
+
+def _add(a, r, share=1.0):
+    t = r.get("tokens", {})
+    a["turns"] += 1
+    a["cost"] += r.get("cost_usd", 0) * share
+    a["in"] += t.get("in", 0)
+    a["read"] += t.get("cache_read", 0)
+    a["write"] += t.get("cache_write", 0)
+    a["req"] += r.get("requests", 0)
+    a["cold"] += r.get("cold_requests", 0)
+    if r.get("ctx_max"):
+        a["ctx"].append(r["ctx_max"])
+    if r.get("command") not in a["cmds"]:
+        a["cmds"].append(r.get("command"))
+
+
+def _cache_pct(a):
+    tot = a["in"] + a["read"] + a["write"]
+    return f"{100 * a['read'] / tot:5.1f}%" if tot else "    -"
+
+
+def report(by):
+    turns, outcomes = ledger_lines()
+    if by == "model":
+        agg = collections.defaultdict(lambda: [0, 0.0])
+        for r in turns:
+            for m, c in r.get("cost_by_model", {}).items():
                 agg[(r["command"], m)][0] += 1
                 agg[(r["command"], m)][1] += c
-        else:
-            for it in r["items"]:
-                key = r["command"] if by == "command" else (r.get("user", "unknown") if by == "user" else it)
-                agg[key][0] += 1
-                agg[key][1] += r["cost_usd"] / max(1, len(r["items"]))
-    for k, (n, c) in sorted(agg.items(), key=lambda x: -x[1][1]):
-        print(f"{str(k):<40} turns={n:<6} est_usd={c:,.2f}")
+        for k, (n, c) in sorted(agg.items(), key=lambda x: -x[1][1]):
+            print(f"{str(k):<40} turns={n:<6} est_usd={c:,.2f}")
+        per_model_pass(turns, outcomes)
+        return
+    agg = collections.defaultdict(_acc)
+    for r in turns:
+        if by == "session":
+            _add(agg[(r.get("date"), str(r.get("session_id"))[:8])], r)
+            continue
+        for it in r["items"]:
+            key = r["command"] if by == "command" else (r.get("user", "unknown") if by == "user" else it)
+            _add(agg[key], r, 1 / max(1, len(r["items"])))
+    print(f"{'key':<44} {'turns':>5} {'est_usd':>8} {'cache%':>6} {'cold/req':>8} {'ctx_max':>9}"
+          + ("  outcome" if by == "item" else "  growth" if by == "session" else ""))
+    for k, a in sorted(agg.items(), key=lambda x: -x[1]["cost"]):
+        ctx = f"{max(a['ctx']):>9,}" if a["ctx"] else f"{'-':>9}"
+        cold = f"{a['cold']}/{a['req']}" if a["req"] else "-"
+        line = f"{str(k):<44} {a['turns']:>5} {a['cost']:>8,.2f} {_cache_pct(a):>6} {cold:>8} {ctx}"
+        if by == "item":
+            line += f"  {outcomes.get(k, '')}"
+        if by == "session":
+            growth = f"{a['ctx'][0]:,} -> {a['ctx'][-1]:,}" if len(a["ctx"]) > 1 else "-"
+            line += f"  {growth}  [{', '.join(a['cmds'])}]"
+        print(line)
+    print("cache% = cache reads / all input; cold/req = requests that rebuilt the cache / requests "
+          "(v2 lines only); ctx_max = largest single request")
+
+
+def per_model_pass(turns, outcomes):
+    """Per model: items touched, passed, avg turns, $/turn, $/pass (item model = family with most cost)."""
+    items = collections.defaultdict(lambda: {"turns": 0, "cost": 0.0, "models": collections.Counter()})
+    for r in turns:
+        for it in r["items"]:
+            if it == "-":
+                continue
+            a = items[it]
+            a["turns"] += 1
+            a["cost"] += r.get("cost_usd", 0) / max(1, len(r["items"]))
+            for m, c in r.get("cost_by_model", {}).items():
+                a["models"][m] += c
+    if not items:
+        return
+    by_model = collections.defaultdict(list)
+    for it, a in items.items():
+        dom = a["models"].most_common(1)[0][0] if a["models"] else "other"
+        by_model[dom].append((it, a))
+    print()
+    print(f"{'model':<10} {'items':>5} {'passed':>6} {'avg turns':>9} {'$/turn':>8} {'$/pass':>8}")
+    for m, rows in sorted(by_model.items()):
+        n = len(rows)
+        passed = sum(1 for it, _ in rows if outcomes.get(it) == "pass")
+        turns_n = sum(a["turns"] for _, a in rows)
+        cost = sum(a["cost"] for _, a in rows)
+        per_pass = f"{cost / passed:8.3f}" if passed else f"{'-':>8}"
+        print(f"{m:<10} {n:>5} {passed:>6} {turns_n / n:>9.1f} {cost / max(1, turns_n):>8.4f} {per_pass}")
+    unmarked = [it for it in items if it not in outcomes]
+    if unmarked:
+        print(f"no outcome recorded for {len(unmarked)} item(s) — `--outcome <ID> pass|fail|open` after export")
 
 
 def transcripts_dir():
@@ -212,7 +321,7 @@ def coverage(ledgers, since):
             if not l.strip():
                 continue
             r = json.loads(l)
-            if since and r.get("date", "") < since:
+            if r.get("type", "turn") != "turn" or (since and r.get("date", "") < since):
                 continue
             seen[canon(r.get("user", "unknown"))] += 1
     people = roster()
@@ -239,7 +348,12 @@ if __name__ == "__main__":
             lds = rest[: next((k for k, x in enumerate(rest) if x.startswith("--")), len(rest))]
         since = sys.argv[sys.argv.index("--since") + 1] if "--since" in sys.argv else None
         sys.exit(coverage(lds, since))
-    if "--report" in sys.argv:
+    if "--outcome" in sys.argv:
+        i = sys.argv.index("--outcome")
+        if len(sys.argv) < i + 3:
+            sys.exit("usage: --outcome <ID> pass|fail|open")
+        outcome(sys.argv[i + 1], sys.argv[i + 2])
+    elif "--report" in sys.argv:
         by = sys.argv[sys.argv.index("--by") + 1] if "--by" in sys.argv else "command"
         report(by)
     else:

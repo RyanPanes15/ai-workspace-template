@@ -518,7 +518,7 @@ flowchart TD
 <h2 id="routing">17. Model routing</h2>
 <p>Tool-neutral tiers: <strong>deep</strong> for reasoning that ships or judges code, <strong>standard</strong> for interactive and
 verifiable work, <strong>light</strong> for formatting. Mechanical sub-stages are dispatched to cheaper subagents; the
-reasoning core is never downgraded. Switching to a higher tier is a manual, per-invocation decision.</p>
+reasoning core is never downgraded. The model is chosen once per session (deep or triage shape); escalation starts a new session from the trail file, never a mid-session switch.</p>
 <div class="tbl"><table>
 <tr><th>Unit</th><th>Tier</th><th>Effort</th><th>Rationale</th></tr>
 <tr><td><code>/analyze</code>, <code>/analyze-change</code></td><td>deep</td><td>high</td><td>Root cause under uncertainty</td></tr>

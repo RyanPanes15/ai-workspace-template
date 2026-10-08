@@ -17,7 +17,15 @@ guardrails. Edits here need developer approval before commit.
    AGENTS.md (cross-cutting), a workflow step (procedural), `docs/verification-guide.md`
    (probe/tooling traps), `context/repos/<name>.md` (repo-specific pattern).
 4. **Prune.** Merge duplicates, drop rules that never fire, move long examples to
-   `docs/lessons-catalog.md`. Target: AGENTS.md stays under ~400 lines.
-5. **Check routing drift.** Compare actual model share per workflow (usage ledger, if
-   enabled) against `.claude/model-routing.md`; fix frontmatter or the catalog.
+   `docs/lessons-catalog.md`. Target: AGENTS.md stays under ~300 lines excluding the generated map and profile blocks **and** the
+   always-loaded total (`/context`: CLAUDE.md + AGENTS.md + command, agent and skill
+   descriptions) stays under ~8K tokens — record the figure in the run's TASKS.md.
+   Anything a workflow re-loads at the moment it is needed is a candidate to move out
+   (`/claude-api prompt-audit` helps find it); evidence rules and guardrails stay.
+5. **Check routing and cache drift.** `usage_tracker.py --report --by model` against
+   `.claude/model-routing.md`: a deep command on the standard tier = a skipped tier
+   gate; `--report` cache% below ~80% or many cold requests per command = mid-session
+   model switches or sessions left to expire; `--by session` growth that never resets =
+   sessions that should have been cleared. Fix the catalog, the session-shape text, or
+   the habit — then `$/pass` per model (same report) decides whether the routing pays.
 6. **Diff review.** Present the proposed context diff with the reason for each change.

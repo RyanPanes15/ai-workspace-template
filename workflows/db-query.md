@@ -38,6 +38,13 @@ First output line is the mode banner: `Investigation mode` or `Reproducer-data m
    catalog, **avoid forward date windows** (historical data skew zeroes results).
 6. Output **user-facing codes** a tester can type, not internal sequence IDs.
 
+## Escalation gate (early)
+Standard tier. When the first composed query refutes the precondition table, or the
+fallback ladder passes step 4 without a reachable set, or the classification needs
+code reading beyond one slice: stop, write the handoff (instance, queries run with
+counts, refuted predicate, suspected files) to `_work/runs/<ID>/HANDOFF.md` or the
+item's trail, and recommend `/analyze` in a deep session. No mid-session model switch.
+
 ## Hard rules
 SELECT only · mode banner · trace before SQL · count before sample · user-facing IDs
 · name the instance on every result · new sentinel discoveries are proposed, not

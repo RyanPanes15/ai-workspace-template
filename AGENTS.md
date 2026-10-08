@@ -59,22 +59,12 @@ When two sources conflict, **stop and surface the conflict** — never silently 
 side. Record the decision in the work-item report.
 
 **Work modes** — every workflow states which one it runs in; the active project
-profile below says which apply to this project (`docs/project-types.md`):
-
-- **Build mode** (fresh code): the spec's acceptance criteria and accepted ADRs define
-  correct. There is no reference to match; unclear requirements go back to the
-  requester, costly decisions get an ADR.
-- **Defect mode** (bug fixing): the reference implementation / prior behavior is the
-  de-facto spec. A difference from it is a *regression hypothesis*, not a verdict —
-  first check whether it was an intentionally requested change (a spec-change
-  registry, changelog, or ticket history).
-- **Port mode** (migration): parity with the reference is the spec, re-derived in the
-  target stack's idiom. Inventory the reference's rules before writing code; carry its
-  comments over; requested changes are recorded, never assumed.
-- **Change mode** (feature / change request): the request text is the spec. The
-  deliberate divergence *is* the deliverable; the reference only defines what must
-  not break. Ambiguity goes back to the requester — don't resolve it by guessing.
-  A bug found in delivered change work is handled in defect mode.
+profile below says which apply here (definitions: `docs/project-types.md` §Work modes):
+**build** = the spec + accepted ADRs define correct · **defect** = prior/reference
+behavior is the spec, a difference is a regression *hypothesis* until the spec-change
+registry is checked · **port** = parity with the reference, re-derived in the target
+idiom, reference comments carried over · **change** = the request text is the spec,
+the divergence is the deliverable, ambiguity goes back to the requester.
 
 <!-- BEGIN:PROFILE (generated from profiles/ by setup — change with --set-type) -->
 ### Active project profile
@@ -175,26 +165,18 @@ changes count as behavior changes — confirm first.
    location from labels, screenshots, or links first.
 
 8. **Read slices, not files.** For code, run `python modules/code-slice/cs.py` before
-   opening a file. Read a whole file only when it is under ~300 lines or the slice
-   left out something you need — then fetch only that range (`cs.py show file:a-b`).
+   opening a file (`outline`, `show file:LINE`, `trace`, `flow`, `refs`, `field`,
+   `diff`, `sql`, `json` — table in `modules/code-slice/README.md`). Read a whole file
+   only when it is under ~300 lines or the slice left out something you need — then
+   fetch only that range (`cs.py show file:a-b`).
 
-   | Need | Command |
-   | --- | --- |
-   | Shape of a file or folder | `cs.py outline PATH` |
-   | The function around a line / a named function | `cs.py show file:LINE` · `cs.py show Name` |
-   | Stack trace or log → the code on it | `cs.py trace log.txt` |
-   | A function plus what it calls (and who calls it) | `cs.py flow file#Name [--up 1]` |
-   | Where something is used, grouped by function | `cs.py refs Name` |
-   | How a field/feature is done elsewhere (port, feature) | `cs.py field name --scope <reference screen> --show` |
-   | Changed functions only (review) | `cs.py diff <repo> [base]` |
-   | A DB object or a column | `cs.py sql NAME` · `cs.py sql --column COL` |
-   | One part of a big JSON/YAML (OpenAPI, i18n) | `cs.py json FILE --find X` · `--path a.b` |
-
-   `... N lines folded (La-b)` marks code left out; `>` marks the target lines.
-
-Other efficiency habits: write a shared-context digest once per batch (scratchpad, not repo) and hand it to
-subagents; one subagent per root-cause cluster, never one per item; re-use a prior
-trail for returned-for-rework items before re-deriving.
+Other efficiency habits: write a shared-context digest once per batch (scratchpad, not
+repo) and hand it to subagents; for analysis, one subagent per root-cause cluster, never
+one per item; re-use a prior trail for returned-for-rework items before re-deriving;
+noisy commands (tests, builds, lint, log greps) run in a subagent that returns failures
+and counts only — the **Quiet commands** in `context/repos/<name>.md`; every turn
+re-sends the whole conversation, so output you don't need is paid for on every later
+request.
 
 ---
 
@@ -225,56 +207,36 @@ Full procedures: `workflows/analyze.md`, `workflows/fix.md`. The non-negotiables
   code); the rule above applies only to comments on code or features the reference
   does not have.
 
-- **Identity check** — confirm the code you read is the code the report describes.
-- **Precondition enumeration before hypothesis** — UI gates, data-load branches,
-  alternate entry paths, module-scoped state, reset/unmount coverage.
 - **Calibrated confidence** on every conclusion; name unknowns instead of inventing.
-- **History pass** — `git log -L` / `git blame` on the suspect region.
-- **Branch isolation** — for server logic, identify which branch runs, what selects
-  it, and what the sibling branch does.
-- **Cross-layer verification** — a client change is not done until the API
-  validation schema and the DB column constraint (nullability, width — in *bytes* for
-  multibyte encodings) accept the new value.
-- **Regression analysis includes revived code** — anything a fix makes reachable for
-  the first time is new code; for suppress-style fixes, audit the invariant partners
-  of the writes that still run.
-- **Horizontal sweep (横展開 / "yokoten")** — after a fix, find the same defect
-  elsewhere. Enumerate by **shape, not identifier** (state the defect class in one
-  sentence with zero identifiers, then key the search on roles), run the same check
-  on a known-good control, verify each hit before listing it. Report tiered
-  (A exact / B related / C architectural); never bundle silently.
-- **Reviewer round before push** — a separate adversarial pass attacks the *claim*
-  ("this resolves the reported problem"): falsifiable restatement, pre-fix control
-  that reproduces the symptom, every trial asserted executed, all input paths driven,
-  PR text verified line-by-line against code. Output is an evidence file.
-- **Show the expected result**, not the absence of the symptom, when a tester will
-  retest against the screen.
-- **Summaries lead with "what I need from you"** — decisions, approvals, manual
-  checks, or "nothing" — before findings and detail.
-- **Reviews list only merge-blocking problems**, each with file:line, why, and how to
-  show it fails (`workflows/review-pr.md`).
+- **The investigation and verification steps live in the workflows** and apply to
+  ad-hoc work too, not only to slash commands: identity check, precondition
+  enumeration before hypothesis, history pass, branch isolation
+  (`workflows/analyze.md` §5–7); cross-layer verification, revived-code regression,
+  horizontal sweep by shape not identifier, reviewer round that attacks the claim with
+  a pre-fix control (`workflows/fix.md` Steps 6, 7, 9.5); merge-blocking-only reviews
+  (`workflows/review-pr.md`). Open the step before doing the thing.
+- **Handoffs are files, not transcripts.** Analysis ends in `reports/<ID>-analysis.md`;
+  a fix starts cold from it; escalation to a stronger tier starts a new session from
+  it. Write the trail before the turn ends.
 
 ---
 
 ## 6. Git conventions (defaults — overridden by the workspace map)
 
-- Work on topic branches (`fix/<area>/<item-id>`, `change/<area>/<cr-id>`); never
-  commit to protected branches.
-- Branch names: lowercase `[a-z0-9/-]` only.
-- Commit header ≤ 72 chars: `<area>: (<item-token>) <short description>`.
-- PR title: `[<ITEM-ID>] <short description>`; pass `--base` explicitly.
-- PR body: item ID + area; English summary; root cause with file:line; changes;
-  verification steps + evidence link; companion PRs for cross-repo work.
-- Sync with the integration branch by **merge-pull**, never rebase a pushed branch.
-- Lint once, PR-wide, at commit time — not during implementation.
-- Full orchestration: `docs/git-workflow.md`.
+Work on topic branches (`fix/<area>/<item-id>`, `change/<area>/<cr-id>`, lowercase
+`[a-z0-9/-]`); never commit to protected branches; sync by merge-pull. Commit header,
+PR title/body format, lint timing and the full push/PR orchestration:
+`docs/git-workflow.md` (read it when a workflow reaches its push step).
 
 ---
 
 ## 7. Communication
 
 - Direct answer first; concise, factual, no sensational modifiers.
-- Explain root cause and why the fix resolves it.
+- **Summaries lead with "what I need from you"** — decisions, approvals, manual
+  checks, or "nothing" — before findings and detail.
+- Explain root cause and why the fix resolves it. Show the expected result, not the
+  absence of the symptom, when a tester will retest against the screen.
 - Terminal-paste code/SQL as plain text when the developer asks for it.
 - Keep domain terms, UI labels, and identifiers in their original language when
   translating — translating a label destroys a grep key.
@@ -326,22 +288,12 @@ happens:
 - you lost a round to something avoidable (wrong branch, wrong repo, stale checkout,
   truncated edit, misread requirement).
 
-**How to record:**
-1. Search `INDEX.md` for an existing class. If one fits, **update that file**: add an
-   occurrence line (date · item · what happened · cost), bump `occurrences` /
-   `last_seen`, and sharpen the Rule or Check if this case slipped past them.
-2. Only if no class fits, create `mistakes/<issue-class>.md` from `_TEMPLATE.md` —
-   named for the class (`wrong-environment-evidence.md`), never for an item — and add
-   its line to `INDEX.md` in the same change.
-3. Write it generalized and blameless: the mistake, why it happens, the rule, the
-   check. No secrets, customer data, or people's names. Keep a file under ~60 lines;
-   past 10 occurrences, summarise older ones as a count.
-4. Mention it in the report: `Mistake log: updated <file>` / `added <file>`.
+**How to record:** the steps are at the top of `mistakes/INDEX.md` (update the existing
+class first; a new file only when none fits; generalized and blameless; say
+`Mistake log: updated/added <file>` in the report).
 
 **Boundaries:** a *mistake the agent made* goes here; an environment fact or tool recipe
 goes in `docs/verification-guide.md` / `context/`; an item narrative stays in `reports/`.
-When a class reaches 3+ occurrences or is `high` severity, `/maintain-context` proposes
-promoting its rule into this file or a workflow step (the mistake file stays as the
-detail). Never delete a mistake file — set `status: retired` and say what removed the
-cause. The folder is tracked in git so the whole team inherits the lessons.
+`/maintain-context` promotes recurring or high-severity classes into rules. The folder
+is tracked in git so the whole team inherits the lessons.
 

@@ -2,7 +2,6 @@
 description: Draft an architecture decision record (status proposed) for a decision that is costly to reverse.
 argument-hint: "<decision title>"
 allowed-tools: Read, Write, Grep, Glob
-model: sonnet
 effort: medium
 ---
 

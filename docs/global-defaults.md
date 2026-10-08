@@ -56,4 +56,38 @@ file changes.
 - For multi-step work, keep a checklist with a verify check per item, tick items as
   they finish, and re-check it before ending a turn.
 - If an approach fails twice, stop and re-plan instead of pushing on.
+
+## Context hygiene
+- When a task ends, say so and suggest a fresh session for the next one; when a long
+  wait is coming (review, approval), say so first so I can compact while the cache is warm.
+- Never ask for a model switch mid-task. When the task needs a stronger model, write a
+  short handoff file (task, failing check, the files that matter, open questions) and ask
+  for a new session started from it.
+- Run noisy commands (tests, builds, lint, log greps) in a subagent and bring back only
+  failures and counts; read code as slices, not whole files.
 ```
+
+---
+
+## Developer habits (not copied into the agent file)
+
+Set once per session, then leave it — every change to the front of the request
+re-reads the whole conversation at full price:
+
+- **Model and effort at turn 1**, right after `/clear` (`/model`, `/effort`). Pick the
+  session shape first (`CLAUDE.md` §Session shapes), then run the command.
+- **`/clear` between tasks.** One long session carries every earlier task on each
+  request. `/compact` before you step away or before a long review wait; `/compact`
+  before `/model` if a switch is unavoidable.
+- **Escalate early, with a handoff.** If the first real check fails or a hypothesis is
+  refuted, start the deep session from the trail file now, not after a long loop.
+- **MCP servers:** switch off what this project does not use (`/mcp`); every enabled
+  server's tool list rides on every request. Prefer plain CLIs (`gh`, `aws`) that load
+  nothing up front. `/context` shows what is loaded before you type.
+- **Cache TTL** (`~/.claude/settings.json`): `"promptCacheTtl": "1h"` pays off when
+  sessions pause more than ~5 minutes at least once per ~45 turns (review waits, push
+  gates) — typical here. Leave `subagentPromptCacheTtl` at its default: subagents run
+  straight through, so the longer window only costs the higher write price.
+- **`/usage`** shows the cache-read share; a low share means the prefix keeps
+  breaking. `usage_tracker.py --report` shows the same per session once the ledger is on.
+

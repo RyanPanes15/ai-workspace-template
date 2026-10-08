@@ -2,7 +2,6 @@
 description: Draft a stakeholder/client reply for a work item, tuned to category and fix status. Draft only.
 argument-hint: "<id>"
 allowed-tools: Read, Grep
-model: sonnet
 effort: medium
 ---
 

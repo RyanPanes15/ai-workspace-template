@@ -20,6 +20,25 @@ it needs but you didn't register. Change it later with
 | Comments | short-comment rule | short-comment rule | reference comments carried over as they are; rule only for new code | ported code keeps its comments; new code follows the rule |
 | Typical gate | spec confirmed before build; ADR for costly decisions | reviewer round with pre-fix control | completeness verifier: no MISSING/WEAKENED/LAYER GAP | regression of every touched shared component |
 
+## Work modes (what "correct" means)
+
+Every workflow states which mode it runs in; AGENTS.md §2 carries the one-line form.
+
+- **Build mode** (fresh code): the spec's acceptance criteria and accepted ADRs define
+  correct. There is no reference to match; unclear requirements go back to the
+  requester, costly decisions get an ADR.
+- **Defect mode** (bug fixing): the reference implementation / prior behavior is the
+  de-facto spec. A difference from it is a *regression hypothesis*, not a verdict —
+  first check whether it was an intentionally requested change (a spec-change
+  registry, changelog, or ticket history).
+- **Port mode** (migration): parity with the reference is the spec, re-derived in the
+  target stack's idiom. Inventory the reference's rules before writing code; carry its
+  comments over; requested changes are recorded, never assumed.
+- **Change mode** (feature / change request): the request text is the spec. The
+  deliberate divergence *is* the deliverable; the reference only defines what must
+  not break. Ambiguity goes back to the requester — don't resolve it by guessing.
+  A bug found in delivered change work is handled in defect mode.
+
 ## Moving between types
 
 Projects change type over their life: a port becomes maintenance after go-live, and a

@@ -2,7 +2,6 @@
 description: Read-only DB investigation for a work item (investigation or reproducer-data mode).
 argument-hint: '<id> [question | "find repro data for <UI state>"]'
 allowed-tools: Read, Grep, Glob, Bash(python modules/db-query/run_query.py:*), Bash(python modules/code-slice/cs.py:*)
-model: sonnet
 effort: medium
 ---
 

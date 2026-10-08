@@ -2,9 +2,10 @@
 
 **Mode:** defect mode (see AGENTS.md §2). **Tier:** deep @ high.
 **Input:** one or more item IDs (e.g. `123`, `BUG-42`, `123,124,130`).
-**Output:** per-item analysis + batch summary. **No code edits, no git mutations,
-no DB writes.** The only permitted write is a shared-context digest in the session
-scratchpad (never a repo file).
+**Output:** per-item analysis + batch summary, written to `reports/<ID>-analysis.md`
+(the handoff for a cold `/fix` session). **No code edits, no git mutations, no DB
+writes.** The only other permitted write is a shared-context digest in the session
+scratchpad.
 
 ---
 
@@ -37,6 +38,14 @@ scratchpad (never a repo file).
 Merge reports, run the cross-item sweep (shared area / module / root cause → one fix
 may resolve several), emit the summary table, close any tracking sessions.
 Subagents never open/close tracking records.
+
+**Phase D — write the trail (mandatory, last)**
+Append the per-item output block as a dated section to `reports/<ID>-analysis.md`
+(same format `workflows/export.md` uses, so a later `/export` extends it). The trail
+must be enough for a **cold session**: item, verdict + confidence, every file:line
+anchor, preconditions, open questions, files to open first, recommended next step.
+End the reply with the handoff line: `Next: /clear, then /fix <ID> (reads the trail)`
+— fix starts from the file, not from this transcript.
 
 ---
 
@@ -169,7 +178,9 @@ Batch summary table: `| ID | Area | Category | Status | Repo | Suspected cause |
 plus cross-item clusters.
 
 ## Hard rules
-- Read-only; subagents read-only (say so in their prompt).
+- Read-only apart from the trail file; subagents read-only (say so in their prompt).
+- The trail is written before the reply ends — an analysis that exists only in the
+  transcript is lost at `/clear`.
 - Precondition table before hypothesis; confidence label mandatory (default medium).
 - Identity check and reference-check lines are mandatory.
 - Repro blocks: phased, reference table first, one action per step, `Name (ID)`.

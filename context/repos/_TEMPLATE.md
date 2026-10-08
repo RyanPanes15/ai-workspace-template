@@ -12,6 +12,12 @@
 ## Commands
 {{detected_commands}}
 
+## Quiet commands
+<!-- Failures-only invocations. Agents run these through the `test-runner` subagent so
+     only failures and counts enter the conversation; full output rides along on every
+     later request otherwise. Confirm each flag once. -->
+{{quiet_commands}}
+
 ## Structure — where things live
 <!-- e.g. pages/ forms/ stores/ models/ routes/ services/ persisters/; the ID → file
      mapping rule (how an area/screen ID maps to files). -->
