@@ -127,12 +127,13 @@ def run(cmd, cwd=None):
 
 def write(path, text):
     path = Path(path)
+    shown = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
     if DRY:
-        say(f"  [dry-run] would write {path.relative_to(ROOT)} ({len(text)} bytes)")
+        say(f"  [dry-run] would write {shown} ({len(text)} bytes)")
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8", newline="\n")
-    say(f"  wrote {path.relative_to(ROOT)}")
+    say(f"  wrote {shown}")
 
 
 def slug(s):
