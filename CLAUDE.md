@@ -36,7 +36,7 @@ a session has one shape:
 | Shape | Model · effort | Runs | Start with |
 | --- | --- | --- | --- |
 | **Deep** | opus · high | `/analyze`, `/fix`, `/review-pr`, `/port-feature`, `/implement-change`, `/build`, `/scaffold-project`, `/area-loop`, `/maintain-context` | `claude --model opus --effort high`, then the command |
-| **Triage** (default floor in `settings.json`) | sonnet · medium | `/log-triage`, `/db-query`, `/stakeholder-reply`, `/adr`, `/repo-overview`, `/export`, ad-hoc questions | `claude --model sonnet --effort medium`, then the command |
+| **Triage** (default floor in `settings.json`) | sonnet · medium | `/brief`, `/log-triage`, `/db-query`, `/stakeholder-reply`, `/adr`, `/repo-overview`, `/export`, ad-hoc questions | `claude --model sonnet --effort medium`, then the command |
 
 The launch flags set model and effort for that process only and save nothing. To change
 shape inside a running process instead: `/clear` → `/model <m>` → `/effort <e>` → the

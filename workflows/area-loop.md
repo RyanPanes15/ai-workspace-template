@@ -16,6 +16,11 @@ growing prefix is not — every turn re-sends everything so far, so the loop run
   per item (one PR each), export.
 - `fix-queue <area list>` — sequence several area loops hottest-first, **no
   parallelism on a single dev stack**.
+- `port-area <AREA | system>` — run `workflows/port-feature.md` per reference area.
+  Backlog from `port_status.py --discover` plus rows not yet `verified`; order shared
+  components and dependencies first, then simplest; show the backlog and the wave
+  plan (one wave = one budget) for confirmation before the first port. Each wave ends
+  at the budget checkpoint below.
 
 ## Budget and digest
 

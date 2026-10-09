@@ -5,7 +5,7 @@
   "truth_order": [
     "Explicit developer instruction",
     "The feature request / spec (docs/specs/) — the deliberate divergence is the deliverable",
-    "context/parity-baseline.md — ported behavior that must not break",
+    "context/projects/<project>/parity-baseline.md — ported behavior that must not break",
     "Reference system — only for behavior the feature leaves untouched",
     "Existing conventions of the ported code"
   ],

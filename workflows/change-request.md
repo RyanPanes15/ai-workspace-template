@@ -9,7 +9,7 @@ Read `mistakes/INDEX.md` first and open matching files (AGENTS.md §10).
 1. Load the request (tracker/catalog) and any decisions recorded since (meeting notes,
    threads, reviewer findings, attached layout files).
 2. **Reconstruct the requirement** in one paragraph + a numbered list of concrete,
-   testable changes. Mark every ambiguity as a question for the requester.
+   testable changes; start from `_work/runs/<task>/BRIEF.md` when one exists. Mark every ambiguity as a question for the requester.
 3. Classify: **layout/UI-only** vs **functional** (functional = estimate and approval
    before any code).
 4. Read the current implementation of every touched area. When the request copies

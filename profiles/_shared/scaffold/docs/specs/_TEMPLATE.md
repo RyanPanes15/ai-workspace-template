@@ -16,7 +16,7 @@ Status: draft | confirmed | built · Owner: <name> · Item: <ID>
 - Data: <entities / fields / constraints touched>
 - API: <endpoints / payload changes>
 - UI: <screens / components; reuse existing ones>
-- Must not break: <existing behavior this touches — see context/parity-baseline.md if it exists>
+- Must not break: <existing behavior this touches — see context/projects/<project>/parity-baseline.md if it exists>
 
 ## Open questions
 - <Each one goes back to the requester; record the answer here.>

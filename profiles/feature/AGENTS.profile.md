@@ -3,7 +3,7 @@
 - **The feature spec is the spec.** `docs/specs/<feature>.md` (or the change request)
   defines the new behavior; the divergence from the reference *is* the deliverable —
   never call it a regression. Ambiguity goes back to the requester.
-- **Ported behavior must not break.** `context/parity-baseline.md` lists the behavior
+- **Ported behavior must not break.** `context/projects/<project>/parity-baseline.md` lists the behavior
   and checks that guard the existing port; consult the reference only for behavior
   the feature leaves untouched. A conflict with an earlier requested change is a
   question for the requester, not a defect.

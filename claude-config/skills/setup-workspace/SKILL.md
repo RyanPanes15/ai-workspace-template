@@ -12,16 +12,23 @@ you collect answers, confirm, and run it non-interactively.
 - `python setup/setup_workspace.py --check` (exit 1 = missing repos, or no config yet).
 - Read `workspace.config.json` if present — you are updating, not starting over.
 
-## 2. Ask the project type first
-Ask which of the four types this is (several allowed) — it decides which repo roles are
+## 2. Ask the project, then its type
+The workspace can hold several projects (`projects[]` in the config); each repo belongs
+to one or more projects, and a project may name other projects' repos as
+`reference_repos` (e.g. the app a port is ported from). Ask whether this is a new project
+or an update to an existing one, then ask which of the four types it is (several
+allowed) — it decides which repo roles are
 required, which context files get scaffolded and which modules are on
 (`docs/project-types.md`):
 1. **greenfield** — fresh new code project (repos may not exist yet: offer to create them)
 2. **maintenance** — bug-fix work on released software
 3. **port** — migration from a reference system (legacy repos are required)
 4. **feature** — feature additions on an existing port
-Put the answer in the answers file as `"project": {"types": [...]}`. To change an
-existing workspace's type: `python setup/setup_workspace.py --set-type <types>`.
+Put the answer in the answers file as
+`"projects": [{"name", "description", "types": [...], "repos": [...], "reference_repos": [...]}]`
+— keep the existing projects in the file. A project's reference repos satisfy the port
+type's legacy-repo requirement. To change one project's type:
+`python setup/setup_workspace.py --set-type <types> --project <name>`.
 
 ## 2b. Tell the user what you need (always, before asking)
 Send one message listing the roles and why each helps:
@@ -51,6 +58,8 @@ Use AskUserQuestion for the choices; free-text for URLs/paths. Don't guess a rep
 
 ## 3. Confirm, then run
 1. Write the answers to `_work/setup-answers.json` (shape: `workspace.config.example.json`).
+   `--config` replaces the whole config: when adding a project, start from the current
+   `workspace.config.json` and add to it.
 2. Show the user the repo table you are about to register and any clones that will run.
 3. On confirmation: `python setup/setup_workspace.py --config _work/setup-answers.json --yes`
    (use `--dry-run` first if the user wants a preview).
@@ -60,6 +69,22 @@ Use AskUserQuestion for the choices; free-text for URLs/paths. Don't guess a rep
 ## 4. After setup
 - Open each new `context/repos/<name>.md` with the user and fill structure,
   ownership, and known defect patterns from the repo's README / own AGENTS.md.
+- **Reconcile the repo's own agent files** (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`,
+  …; the stub lists them under Tech stack). Classify each section:
+  - *repo-specific* (build quirks, special test commands, paths to avoid, legacy
+    traps) → copy into `context/repos/<name>.md`;
+  - *duplicate* of a workspace rule, whatever the wording → note it, nothing to copy;
+  - *conflict* — same topic, different substance, or a workspace rule that doesn't fit
+    this stack → stop and ask the user; record the decision under "Own agent files"
+    in `context/repos/<name>.md`. A conflict with an AGENTS.md §3 guardrail keeps the
+    guardrail unless the user carves out an exception;
+  - *cross-cutting* (a pattern other repos would follow) → note it as a
+    `/maintain-context` promotion candidate;
+  - *decorative or stale* → ignore.
+  Never edit the repo's own files; propose changes for the user to make as a PR under
+  the repo's policy.
+- Check the workspace still fits the new stack: its quiet commands run, and
+  `.claude/hooks/post_edit_check.py` covers its file types.
 - If usage metrics were enabled, remind them to restart and verify a ledger line.
 - Never write credentials into config — they go in `secrets/` by the user.
 - Adding a repo later: update the config (or re-run interactively), then

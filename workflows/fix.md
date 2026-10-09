@@ -36,7 +36,8 @@ unverified runtime hypothesis — those ship and get reverted.
 ### Step 5 — Implement
 0. **Scaffold before editing** (multi-file / multi-hunk / prior-session analysis):
    read-only subagent per target file re-verifies every cited anchor against the
-   *current* tree and returns verbatim edit specs (unique anchor + replacement).
+   *current* tree and returns verbatim edit specs (unique anchor + replacement);
+   prompt per `.claude/model-routing.md` §Subagent brief.
    Same-file edits are applied sequentially in one tree — never parallel worktrees.
 1. Ground the change in the behavior contract. Conflict between reference and
    spec/report → stop and surface.

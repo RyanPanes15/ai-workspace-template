@@ -11,7 +11,7 @@ Last updated: <date> (<item-id>: <one-line lesson>)
 
 ## 1. Environment / stack
 
-Fill in via setup or by hand (project-specific facts go in `context/environment.md`):
+Fill in via setup or by hand (project-specific facts go in `context/projects/<project>/environment.md`):
 - How to start the local stack (frontend URL/port, API port, DB it points at).
 - **There is usually exactly one local stack.** A second frontend on another port may
   fail CORS preflight on every API call and look like a defect in your fix. Take
@@ -131,7 +131,7 @@ is often the cleanest probe — revert it after.
 
 ## 6. Known test records
 
-Keep project-specific records in `context/test-records.md`: record keys, which
+Keep project-specific records in `context/projects/<project>/test-records.md`: record keys, which
 instance/tenant, what state it is in, date verified. Re-verify state before reuse.
 
 ## 7. Maintenance rule

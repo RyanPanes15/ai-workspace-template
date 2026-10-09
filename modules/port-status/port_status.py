@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Progress and consistency of a port, from context/port-map.csv.
+"""Progress and consistency of a port, from context/projects/<project>/port-map.csv.
 
   python modules/port-status/port_status.py                 # progress summary
   python modules/port-status/port_status.py --check         # validate rows and paths (exit 1 on problems)
   python modules/port-status/port_status.py --discover      # reference areas with no row (needs area-index)
   python modules/port-status/port_status.py --set ORD-C0100 verified --inventory _work/runs/ORD-C0100/inventory.md
   python modules/port-status/port_status.py --add ORD-C0100 --ref "legacy/OrderFrm.cs;legacy/OrderAction.java"
+  add --project <name> when the workspace has more than one port project.
 
 port-map.csv columns: area, reference_paths, new_paths, status, inventory, notes.
 Paths are `;`-separated and relative to the workspace root. Lines starting with # are skipped.
@@ -20,14 +21,25 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MAP = ROOT / "context" / "port-map.csv"
+MAP = None
 FIELDS = ["area", "reference_paths", "new_paths", "status", "inventory", "notes"]
 STATUSES = ["not-started", "inventoried", "in-progress", "verified", "done", "deferred"]
 
 
+def pick_project(name):
+    """The named project, or the only port project when no name is given."""
+    cfg = json.loads((ROOT / "workspace.config.json").read_text(encoding="utf-8"))
+    projects = cfg.get("projects", [])
+    match = [p for p in projects if (p["name"] == name if name else "port" in p.get("types", []))]
+    if len(match) != 1:
+        sys.exit(f"pass --project <name> (port projects: "
+                 f"{', '.join(p['name'] for p in projects if 'port' in p.get('types', [])) or 'none'})")
+    return cfg, match[0]
+
+
 def load():
     if not MAP.exists():
-        sys.exit("context/port-map.csv not found — run setup with the port profile, or create it with the header:\n"
+        sys.exit(f"{MAP.relative_to(ROOT).as_posix()} not found — run setup with the port profile, or create it with the header:\n"
                  + ",".join(FIELDS))
     lines = [l for l in MAP.read_text(encoding="utf-8-sig").splitlines() if l.strip() and not l.startswith("#")]
     return list(csv.DictReader(lines))
@@ -89,12 +101,13 @@ def check(rows):
     return 1 if problems else 0
 
 
-def discover(rows):
+def discover(rows, cfg, project):
     idx = ROOT / "_work" / "area-index.json"
     if not idx.exists():
         sys.exit("No area index — run: python modules/area-index/area_index.py build")
-    cfg = json.loads((ROOT / "workspace.config.json").read_text(encoding="utf-8"))
-    ref_repos = {r["name"] for r in cfg.get("repos", []) if str(r.get("role", "")).startswith("legacy")}
+    ref_repos = {r["name"] for r in cfg.get("repos", [])
+                 if r["name"] in project.get("repos", []) and str(r.get("role", "")).startswith("legacy")}
+    ref_repos |= set(project.get("reference_repos", []))
     index = json.loads(idx.read_text(encoding="utf-8"))["index"]
     mapped = {r["area"].upper() for r in rows}
     missing = sorted(a for a, repos in index.items() if set(repos) & ref_repos and a.upper() not in mapped)
@@ -113,7 +126,11 @@ def main():
     ap.add_argument("--new", default="")
     ap.add_argument("--inventory", default=None)
     ap.add_argument("--note", default=None)
+    ap.add_argument("--project", help="port project (default: the only one)")
     a = ap.parse_args()
+    global MAP
+    cfg, project = pick_project(a.project)
+    MAP = ROOT / "context" / "projects" / project["name"] / "port-map.csv"
     rows = load()
     if a.add:
         if any(r["area"] == a.add for r in rows):
@@ -146,7 +163,7 @@ def main():
     if a.check:
         return check(rows)
     if a.discover:
-        return discover(rows)
+        return discover(rows, cfg, project)
     summary(rows)
     return 0
 

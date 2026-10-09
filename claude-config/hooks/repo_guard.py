@@ -11,14 +11,26 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 
 from _config import load_config, repo_paths
 
+PROTECTED = {"read-only", "flag-only"}
 MUTATING = r'\bgit\b(?:\s+-C\s+("[^"]+"|\'[^\']+\'|\S+))?\s+(commit|push|merge|rebase|reset|checkout\s+-b|switch\s+-c|stash(?!\s+list)|cherry-pick|revert|tag\s+\S|am|apply|clean|restore|rm|mv)\b'
 
 
 def norm(p):
     return str(p).replace("\\", "/").strip('"\'').rstrip("/").lower()
+
+
+def real(p):
+    return norm(Path(str(p).strip('"\'')).resolve())
+
+
+def owner(path, repos):
+    """The most specific registered repo containing `path` (both resolved), or None."""
+    hits = [(name, policy, root) for name, policy, root in repos if path == root or path.startswith(root + "/")]
+    return max(hits, key=lambda h: len(h[2]), default=None)
 
 
 def deny(reason):
@@ -34,18 +46,17 @@ def main():
     except Exception:
         return
     cfg = load_config()
-    protected = repo_paths(cfg, {"read-only", "flag-only"})
-    if not protected:
+    repos = repo_paths(cfg)
+    if not any(policy in PROTECTED for _, policy, _ in repos):
         return
     tool = data.get("tool_name")
     ti = data.get("tool_input") or {}
     if tool in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
-        fp = norm(ti.get("file_path") or ti.get("notebook_path") or "")
-        for name, root in protected:
-            if fp.startswith(root + "/"):
-                deny(f"Repo '{name}' is read-only/flag-only per workspace.config.json. "
-                     "Surface the needed change instead of editing it.")
-                return
+        fp = ti.get("file_path") or ti.get("notebook_path") or ""
+        hit = owner(real(fp), repos) if fp else None
+        if hit and hit[1] in PROTECTED:
+            deny(f"Repo '{hit[0]}' is read-only/flag-only per workspace.config.json. "
+                 "Surface the needed change instead of editing it.")
     elif tool in ("Bash", "PowerShell"):
         cmd = ti.get("command") or ""
         cwd = norm(data.get("cwd") or "")
@@ -55,10 +66,10 @@ def main():
             where = target or (norm(cds[-1]) if cds else cwd)
             if where and not re.match(r"^([a-z]:)?/", where) and cwd:
                 where = norm(os.path.normpath(os.path.join(cwd, where)))
-            for name, root in protected:
-                if where == root or where.startswith(root + "/"):
-                    deny(f"Mutating git in read-only repo '{name}' is not allowed.")
-                    return
+            hit = owner(real(where), repos) if where else None
+            if hit and hit[1] in PROTECTED:
+                deny(f"Mutating git in read-only repo '{hit[0]}' is not allowed.")
+                return
 
 
 if __name__ == "__main__":

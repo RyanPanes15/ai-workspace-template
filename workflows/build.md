@@ -7,13 +7,14 @@ explicit "yes".
 
 1. **Plan.** Create `_work/runs/<feature>/TASKS.md` (AGENTS.md §5). Read
    `mistakes/INDEX.md` and open the matching files.
-2. **Spec.** Find or write `docs/specs/<feature>.md` from `docs/specs/_TEMPLATE.md`:
+2. **Spec.** Start from `_work/runs/<feature>/BRIEF.md` when one exists (`workflows/brief.md`).
+   Find or write `docs/specs/<feature>.md` from `docs/specs/_TEMPLATE.md`:
    problem, testable acceptance criteria, non-goals, design notes, open questions.
    Unresolved questions that change what ships → ask before building. Record answers in
    the spec.
-3. **Context.** Read `context/architecture.md`, `context/conventions.md`, accepted ADRs
+3. **Context.** Read `context/projects/<project>/architecture.md`, `context/projects/<project>/conventions.md`, accepted ADRs
    (`docs/adr/`), and the repo context files. On an existing port, also
-   `context/parity-baseline.md`. Find existing components to reuse
+   `context/projects/<project>/parity-baseline.md`. Find existing components to reuse
    (`area_index.py`, `cs.py find` / `cs.py refs`) before creating new ones.
 4. **Design note** (in the spec's *Design notes*): which layers change, new types /
    endpoints / tables, what is reused. Apply `docs/design-principles.md`. A decision that

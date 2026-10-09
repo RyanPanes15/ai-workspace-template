@@ -12,13 +12,13 @@ def load_config():
         return {}
 
 
-def repo_paths(cfg, policies):
-    """Absolute, normalized paths of repos whose policy is in `policies`."""
+def repo_paths(cfg):
+    """(name, policy, resolved normalized path) of every registered repo."""
     out = []
     for r in cfg.get("repos", []):
-        if r.get("policy") in policies and r.get("path"):
+        if r.get("path"):
             p = Path(r["path"])
             if not p.is_absolute():
                 p = ROOT / p
-            out.append((r.get("name", "?"), str(p.resolve()).replace("\\", "/").lower()))
+            out.append((r.get("name", "?"), r.get("policy"), str(p.resolve()).replace("\\", "/").lower()))
     return out

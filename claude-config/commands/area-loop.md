@@ -1,6 +1,6 @@
 ---
-description: Analyze or fix every item of one area in a single warm context; stops at the human push gate.
-argument-hint: "analyze|fix <AREA | id,id,...>"
+description: Analyze, fix or port every item of one area in a single warm context; stops at the human push gate.
+argument-hint: "analyze|fix|port-area <AREA | id,id,... | system>"
 allowed-tools: Read, Write, Edit, Grep, Glob, Task, Bash(git:*), Bash(gh:*), Bash(npm:*), Bash(npx:*), Bash(python:*), Bash(python modules/code-slice/cs.py:*)
 effort: high
 ---

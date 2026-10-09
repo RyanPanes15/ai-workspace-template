@@ -2,8 +2,8 @@
 
 people.json:
   {"people": [
-     {"name": "Ana", "role": "dev", "aliases": ["ana.reyes@example.com", "ana.reyes", "areyes", "Ana R"]},
-     {"name": "Ben", "role": "tester", "aliases": ["ben@example.com"]}
+     {"name": "Ana", "role": "dev", "aliases": ["ana.reyes@corp.com", "ana.reyes", "areyes", "Ana R"]},
+     {"name": "Ben", "role": "tester", "aliases": ["ben@corp.com"]}
   ]}
 Matching is case-insensitive on the full value, the email local-part, and the first
 token. Unknown values come back unchanged (and are worth adding as aliases).

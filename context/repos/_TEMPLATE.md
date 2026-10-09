@@ -28,6 +28,10 @@
 ## Common defect patterns in this repo
 <!-- Add as they are found: symptom → mechanism → check. One worked example each. -->
 
+## Own agent files — conflicts with workspace rules
+<!-- Only when the repo ships AGENTS.md / CLAUDE.md / .cursorrules: each conflict with a
+     workspace rule and the decision (workspace rule wins / scoped exception), dated. -->
+
 ## Before submitting a change
 - Verification could have failed (pre-fix control reproduced the symptom).
 - Lint + typecheck + tests actually ran on the changed files.

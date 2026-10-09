@@ -1,7 +1,7 @@
 # Workflow: Scaffold a new project (greenfield bootstrap)
 
 **Mode:** build. **Tier:** deep @ high. Run once per new repo, after
-`context/architecture.md` has a confirmed first draft.
+`context/projects/<project>/architecture.md` has a confirmed first draft.
 
 1. **Plan.** `_work/runs/scaffold/TASKS.md`. Confirm with the developer: stack, package
    manager, runtime versions, repo names, hosting, CI provider. These are decisions —
@@ -15,16 +15,16 @@
    - type checking where the language has it, in strict mode
    - a test runner with one passing test and the `test` script
    - environment config with an `.env.example` (no secrets) and validation at startup
-   - folder layout from `context/conventions.md`
+   - folder layout from `context/projects/<project>/conventions.md`
    - CI workflow: install → lint → typecheck → test → build on every PR
-4. **Wire cross-cutting basics** named in `context/architecture.md`: error handling and
+4. **Wire cross-cutting basics** named in `context/projects/<project>/architecture.md`: error handling and
    mapping, logging with request IDs, health endpoint, config loading. Nothing
    speculative (YAGNI) — no feature flags, plugin systems or abstractions without a
    second user.
 5. **Verify** the skeleton: every script runs clean locally; CI config is valid; the
    app starts and the health check answers.
 6. **Register** the repo details: `python setup/setup_workspace.py --render`, then fill
-   `context/repos/<name>.md` (commands, layout, ownership) and `context/conventions.md`.
+   `context/repos/<name>.md` (commands, layout, ownership) and `context/projects/<project>/conventions.md`.
 7. **Overview page.** Create `<repo>/README.html` with `workflows/repo-overview.md`
    (general details, scope, tech stack, architecture, file structure, process flows).
    Facts not decided yet are written as "Not yet defined".

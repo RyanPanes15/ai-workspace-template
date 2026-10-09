@@ -2,10 +2,11 @@
 
 The template runs four kinds of project. Setup asks which one (a project can be more
 than one — e.g. a port that is also taking feature requests) and then:
-writes the matching rules into AGENTS.md (§2 *Active project profile*), scaffolds the
-context files that type needs, enables its default modules, and warns about repo roles
-it needs but you didn't register. Change it later with
-`python setup/setup_workspace.py --set-type port,feature`.
+writes the matching rules into AGENTS.md (§2 *Active project profiles*), scaffolds the
+context files that type needs into `context/projects/<project>/`, enables its default
+modules, and warns about repo roles it needs but you didn't register. A workspace can
+hold several projects, each with its own types. Change one later with
+`python setup/setup_workspace.py --set-type port,feature --project <name>`.
 
 | | 1. Fresh new code | 2. Maintenance (bug-fix) | 3. Port migration | 4. Feature on existing port |
 | --- | --- | --- | --- | --- |
@@ -43,7 +44,7 @@ Every workflow states which mode it runs in; AGENTS.md §2 carries the one-line 
 
 Projects change type over their life: a port becomes maintenance after go-live, and a
 maintained port starts taking features. Add the new type rather than replacing the
-old one while both kinds of work run (`--set-type port,feature`); drop the old one when
+old one while both kinds of work run (`--set-type port,feature --project <name>`); drop the old one when
 its work is finished. Scaffolds are only ever added, never overwritten.
 
 ## Where each type's rules live

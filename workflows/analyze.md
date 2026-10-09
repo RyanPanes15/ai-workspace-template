@@ -29,7 +29,8 @@ scratchpad.
 **Phase B — analysis**
 - **≥2 items:** cluster by layer / root-cause theme (UI layout, form state, server
   query, cross-cutting). One **read-only** analysis subagent per cluster, dispatched
-  in parallel, same tier as the base. Prompt includes: digest path, cluster records,
+  in parallel, same tier as the base. Prompt follows the subagent brief fields
+  (`.claude/model-routing.md` §Subagent brief): digest path, cluster records,
   exact file pointers, repo context files, "follow workflows/analyze.md Steps 4–12,
   no edits", and the output schema.
 - **1 item:** run inline — fanning out one item wastes a round-trip.

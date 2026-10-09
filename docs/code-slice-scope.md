@@ -51,18 +51,18 @@ tree-sitter, 19 in fallback mode (TS/TSX, C# in Shift-JIS, Java, PL/SQL, Python,
 Kotlin, VB, PHP; Node, Java and Japanese .NET traces; tsconfig path aliases; diff of
 working tree and of a commit range). All pass in both modes.
 
-Real-world run against a production multi-repo port workspace (web client, legacy
-desktop reference client, legacy reference server, database packages), read-only:
+Real-world run against a production port workspace (React/TypeScript client, C#
+WinForms reference client, Java reference server, Oracle DDL/PL-SQL), read-only:
 
 | Scenario | Source size | Output |
 | --- | --- | --- |
-| `show` a line in a screen component | ~3k-line file; ~300-line handler | ~130 lines (the handler, folded) |
-| `trace` a server null-reference exception | ~9k-line class; ~1k-line method | ~40 lines + ~15 for the caller |
-| `flow` a UI event handler | handler + 2 callees in files of ~500 and 1k+ lines (resolved through path aliases) | ~80 lines |
-| `field` across a reference screen and the new screen (~2k and ~3k lines, one in a legacy encoding) | ~30 hits in ~10 functions | ~20-line map; ~350 lines with `--show` |
-| `sql` package member | ~800-line package body, member also forward-declared | the ~140-line function (declaration skipped) |
-| `sql --column` | DDL folder, ~30 hits | table name + column line per hit |
-| `diff` three merged commits | 5 files incl. a ~4k-line component | changed functions only, within the 600-line budget |
+| `show` a line in a screen component | 3,193-line file; 333-line handler | 135 lines (the handler, folded) |
+| `trace` a Java NPE | 8,775-line class; 1,128-line method | 39 lines + 13 for the caller |
+| `flow` an image-loading handler | handler + 2 callees in files of 560 and 1,000+ lines (resolved through tsconfig aliases) | 77 lines |
+| `field` across reference (C#, 2,296 lines, Shift-JIS) and new (TSX, 3,193 lines) screens | 29 hits in 9 functions | 20-line map; 351 lines with `--show` |
+| `sql` package member | 828-line package body, member also forward-declared | the 138-line function (declaration skipped) |
+| `sql --column` | DDL folder, 34 hits | table name + column line per hit |
+| `diff` three merged commits | 5 files incl. a 3,840-line component | changed functions only, within the 600-line budget |
 
 Reduction against reading the files involved: 83% (SQL member) to 99% (trace), above 95% in most cases.
 

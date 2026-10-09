@@ -5,8 +5,8 @@
   "truth_order": [
     "Explicit developer instruction",
     "The feature spec / acceptance criteria (docs/specs/)",
-    "Accepted ADRs and context/architecture.md",
-    "context/conventions.md and the stack's idiom"
+    "Accepted ADRs and context/projects/<project>/architecture.md",
+    "context/projects/<project>/conventions.md and the stack's idiom"
   ],
   "required_roles": [],
   "recommended_roles": [

@@ -1,14 +1,26 @@
 {
-  "project": {
-    "name": "my-project",
-    "description": "one line",
-    "source_language": "English",
-    "stakeholder_language": "English",
-    "types": [
-      "port",
-      "feature"
-    ]
-  },
+  "source_language": "English",
+  "stakeholder_language": "English",
+  "projects": [
+    {
+      "name": "my-project",
+      "description": "one line",
+      "types": [
+        "port",
+        "feature"
+      ],
+      "repos": [
+        "web",
+        "api",
+        "schema",
+        "reports",
+        "docs",
+        "e2e",
+        "legacy-client"
+      ],
+      "reference_repos": []
+    }
+  ],
   "repos": [
     {
       "name": "web",

@@ -8,7 +8,7 @@ Goal: turn thousands of log lines into a short list of distinct problems, each m
 **NEW / STILL OPEN / FIXED IN CODE / WHITELISTED**, with evidence.
 
 1. **Get the logs** for the window into `_work/logs/` (project-specific fetch; see
-   `context/environment.md`). Name the environment (staging / prod / test instance) —
+   `context/projects/<project>/environment.md`). Name the environment (staging / prod / test instance) —
    every conclusion is scoped to it.
 2. **Symbolicate client stacks** if the client ships minified bundles: pass
    `--symbolicate-maps <dir with the DEPLOYED build's *.js.map>`. Maps from another

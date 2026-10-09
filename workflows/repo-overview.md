@@ -21,15 +21,15 @@ so — the page is part of the repo and goes through that repo's normal change p
    | Section | Sources |
    | --- | --- |
    | General details | `workspace.config.json` entry, `context/repos/<name>.md` |
-   | Project scope | `context/architecture.md`, `docs/specs/`, the repo's `README.md` |
+   | Project scope | `context/projects/<project>/architecture.md`, `docs/specs/`, the repo's `README.md` |
    | Tech stack | package manifests and lockfiles (versions from there, not memory) |
-   | Architecture | entry points, `context/architecture.md`, accepted ADRs |
+   | Architecture | entry points, `context/projects/<project>/architecture.md`, accepted ADRs |
    | File structure | `python modules/code-slice/cs.py outline <repo>`; top two levels only |
    | Process flows | entry points + `cs.py flow file#Name` for each main flow |
    | Commands | manifest scripts / Makefile / task runner config |
    | Configuration | `.env.example` and the config schema — names and purpose only |
    | Testing & CI | test config, lint config, CI workflow files |
-   | Conventions | `context/conventions.md`, lint/formatter config |
+   | Conventions | `context/projects/<project>/conventions.md`, lint/formatter config |
    | Related repos | AGENTS.md workspace map (ownership routing) |
    | Decisions | `docs/adr/`, `docs/specs/` |
 

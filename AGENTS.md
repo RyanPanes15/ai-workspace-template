@@ -18,6 +18,9 @@ playbooks and helper scripts, and is itself a small git repo.
   `AGENTS.md`/`CLAUDE.md` if it has one). Read it **before** searching, editing, or
   running git in that repo; cache it for the session. (Tools with path-scoped rules get
   a generated short form on file access; the full file is still the source.)
+- The workspace can hold several projects (§1 *Projects*). A repo's project decides the
+  profile (§2) and the project context dir `context/projects/<project>/`, which holds
+  that project's architecture, conventions, port map and similar files.
 - Workflows (`workflows/*.md`) are the step-by-step procedures. Open only the one
   you are running.
 - Playbooks (`docs/*.md`) are read when a workflow step points at them
@@ -25,12 +28,14 @@ playbooks and helper scripts, and is itself a small git repo.
 - **`mistakes/INDEX.md` is read at the start of every non-trivial task** (it is short);
   open only the mistake files whose triggers match (§10).
 
-Layering (later wins on conflict, narrower scope wins):
+Layering (later wins on conflict, narrower scope wins — except §3 guardrails, which a
+narrower layer cannot relax; surface such a conflict instead):
 
 | Layer | File | Applies |
 | --- | --- | --- |
 | Personal | `~/.claude/CLAUDE.md` / tool-global config (see `docs/global-defaults.md`) | every project |
 | Workspace | `AGENTS.md` (this file) | whole workspace |
+| Project | its profile in §2, `context/projects/<project>/` | that project's repos |
 | Repo | `context/repos/<name>.md`, then the repo's own `AGENTS.md`/`CLAUDE.md` | that repo |
 | Local | `AGENTS.local.md` (gitignored) | this machine only — never quote it |
 
@@ -67,10 +72,10 @@ registry is checked · **port** = parity with the reference, re-derived in the t
 idiom, reference comments carried over · **change** = the request text is the spec,
 the divergence is the deliverable, ambiguity goes back to the requester.
 
-<!-- BEGIN:PROFILE (generated from profiles/ by setup — change with --set-type) -->
-### Active project profile
+<!-- BEGIN:PROFILE (generated from profiles/ by setup — change with --set-type --project) -->
+### Active project profiles
 
-_No project type set. Run `python setup/setup_workspace.py --set-type <greenfield|maintenance|port|feature>` (see docs/project-types.md)._
+_No project type set. Run `python setup/setup_workspace.py --set-type <greenfield|maintenance|port|feature> --project <name>` (see docs/project-types.md)._
 <!-- END:PROFILE -->
 
 Performance or refactor improvements are welcome only when observable behavior is
@@ -191,6 +196,9 @@ Full procedures: `workflows/analyze.md`, `workflows/fix.md`. The non-negotiables
   going; blocked → say what blocks each item. End the file with a short *Results*
   section. Check in on the plan only when it contains a decision that is the
   developer's; otherwise proceed.
+- **A request with no clear command, repo scope or done-condition starts with
+  `workflows/brief.md`** (≤3 questions, asked only after inferring from the workspace
+  map and the trail).
 - **Stop and re-plan when it goes sideways.** Two failed attempts with the same
   approach, or evidence that contradicts the plan → stop, rewrite the plan in
   `TASKS.md` with what you now know, then continue. After two nudges on the same open

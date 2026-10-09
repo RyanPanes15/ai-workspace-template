@@ -34,7 +34,7 @@ not documented to reset the model. `/model` saves to user settings unless applie
 | Shape | Model · effort | Units |
 | --- | --- | --- |
 | Deep | opus · high | `/analyze`, `/analyze-change`, `/fix`, `/implement-change`, `/review-pr`, `/port-feature`, `/build`, `/scaffold-project`, `/area-loop`, `/maintain-context` |
-| Triage (floor) | sonnet · medium | `/log-triage`, `/db-query`, `/stakeholder-reply`, `/adr`, `/repo-overview`, `/setup-workspace`, `/export`, ad-hoc chat |
+| Triage (floor) | sonnet · medium | `/brief`, `/log-triage`, `/db-query`, `/stakeholder-reply`, `/adr`, `/repo-overview`, `/setup-workspace`, `/export`, ad-hoc chat |
 
 Light units (`/export`, metrics, formatting) run at the session's model and dispatch
 their writing to a light subagent, so the cheap tier is kept in either shape.
@@ -44,6 +44,7 @@ their writing to a light subagent, so the cheap tier is kept in either shape.
 | Unit | Tier | Effort | Rationale |
 | --- | --- | --- | --- |
 | `/export`, metrics, `item-scaffolder`, `report-formatter`, `test-runner` | light | — | assemble/format/run existing content; deterministic |
+| `/brief` | standard | medium | intake: decides which deep command runs, so it runs cheap and first; writes a file the command starts cold from |
 | `/log-triage` | standard | medium | clustering is mechanical; per-issue code check is verifiable |
 | `/db-query` | standard | medium | interactive SQL; escalate hard reproducer searches |
 | `/stakeholder-reply` | standard | medium | short, but external text — accuracy gate vetoes light |
@@ -55,7 +56,7 @@ their writing to a light subagent, so the cheap tier is kept in either shape.
 | `/adr` | standard | medium | drafting from a decided conversation |
 | `/repo-overview` | standard | medium | documents existing files; every fact traced to a file and diagrams render-checked |
 | `/port-feature` | deep | high | silent rule omission is the failure mode |
-| `/area-loop` | deep | high | wraps analyze/fix; inherits their routing |
+| `/area-loop` | deep | high | wraps analyze/fix/port; inherits their routing |
 | `/maintain-context` | deep | high | edits files that shape every future session |
 | `fix-reviewer`, `fix-verifier`, `completeness-verifier` | deep | high | the adversarial safety net; own context, so the probes never ride along in the main session |
 
@@ -75,6 +76,25 @@ the main context:
   orchestration inline (tool calls, not reasoning).
 - port: pattern extraction + scaffolding → standard; inventory, logic drafting,
   verification → deep.
+
+## Subagent brief
+
+Every ad-hoc dispatch (the per-cluster analysis agents, the anchor / edit-spec agents in
+fix, the pattern-extraction agents in port) is composed from the same fields; the named
+agents in `.claude/agents/` carry them in their "Inputs" paragraph:
+
+- **Objective** — one sentence, the question or artifact.
+- **Starting state** — digest path, files or file:line pointers, branch, repo context
+  files, quiet commands.
+- **Target state** — the artifact to return and its schema (failures + counts, verdict
+  table, edit specs, …).
+- **Scope** — read-only or not; which repos and directories; do-not-touch list.
+- **Stop conditions** — when to return early; never commit, push or mutate the shared
+  tree; what needs the developer goes under `needs developer:`.
+- **Progress evidence** — every claim cites a tool result or a file:line read in this
+  run; "no error" alone is not a pass.
+
+Ask for conclusions, evidence and checks, never for the subagent's reasoning.
 
 ## Effort
 
@@ -106,6 +126,8 @@ let them `/clear` into a deep session. If a mid-session switch is unavoidable,
 - Standard units: fall back **up**, surface (cost spike, quality safe). Never silently
   fall to light.
 - Light units: fall back to standard silently, with a log line.
+- A fallback keeps the unit's effort only up to the new model's ceiling: a deep unit
+  at an effort level the standard model lacks runs at that model's highest level.
 
 ## Audit
 
@@ -114,4 +136,11 @@ compare against this table: per-unit model share (a deep command that ran on son
 means a skipped tier gate), **cache-read share** per session and user (low = the
 prefix keeps breaking: switches or long gaps), **cold requests** per command (model
 flips), and context growth per session (an ever-climbing curve = a session that
-should have been cleared). The ledger is the only place that shows it.
+should have been cleared), and per-unit **effort** against the catalog's Effort
+column. The ledger is the only place that shows it. Optional spend alerts:
+`usage_metrics.alert_usd_per_day` in `workspace.config.json`.
+
+**Downgrade gate.** Before lowering a unit's tier or effort, run it on 3–5 recent real
+inputs at both settings and compare: the same verdicts and checks passing, and lower
+`$/pass` (cost per passed item, not per turn). Any lost verdict or extra failed check
+keeps the current setting. Record the comparison in the change's reason.

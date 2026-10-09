@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Stop hook: append one line per turn to reports/usage.jsonl.
 
-Records session, workflow command, item id(s), tokens by type, model family,
+Records session, workflow command, item id(s), tokens by type, model family, effort,
 estimated cost, and wall seconds, so you can see where effort goes per item and
 audit model routing (actual vs intended tier).
 
@@ -11,6 +11,7 @@ module is enabled. Then restart the agent (or open /hooks once).
 CLI:
   python modules/usage-metrics/usage_tracker.py --report        # per-command totals + cache signals
   python modules/usage-metrics/usage_tracker.py --report --by model|item|user|session
+        # --by model groups by (command, model, effort)
   python modules/usage-metrics/usage_tracker.py --outcome <ID> pass|fail|open   # per-item verdict ($/pass)
   python modules/usage-metrics/usage_tracker.py --check         # heartbeat: is the hook actually recording?
   python modules/usage-metrics/usage_tracker.py --coverage --ledgers a.jsonl b.jsonl [--since 2026-09-01]
@@ -24,6 +25,9 @@ keyed by model family substring ("opus", "sonnet", "haiku", ...). They are
 estimates for comparison, not billing. DEFAULT_RATES follow the public price sheet as
 of 2026-09 (cache read = 0.1x input, cache write = 1.25x input); verify against
 claude.com/pricing and override in the config when the sheet changes.
+
+Alerts: workspace.config.json -> usage_metrics.alert_usd_per_day, keyed by model family
+({"opus": 20}); --report lists the days whose estimated spend on that family exceeded it.
 
 Signals the report derives per key (command / item / user / session):
   cache%   share of input tokens read from cache — low = the prefix keeps breaking
@@ -65,12 +69,15 @@ def current_user():
         return u or "unknown"
 
 
-def rates():
+def usage_cfg():
     try:
-        cfg = json.loads((ROOT / "workspace.config.json").read_text(encoding="utf-8"))
-        return cfg.get("usage_metrics", {}).get("rates") or DEFAULT_RATES
+        return json.loads((ROOT / "workspace.config.json").read_text(encoding="utf-8")).get("usage_metrics", {})
     except Exception:
-        return DEFAULT_RATES
+        return {}
+
+
+def rates():
+    return usage_cfg().get("rates") or DEFAULT_RATES
 
 
 def family(model, table):
@@ -127,6 +134,7 @@ def hook():
     tok = collections.Counter()
     cost = collections.Counter()
     seen = set()
+    efforts = collections.Counter()
     requests = cold = ctx_max = 0
     for e in turn:
         msg = e.get("message") or {}
@@ -134,6 +142,8 @@ def hook():
         if e.get("type") != "assistant" or not u or msg.get("id") in seen:
             continue
         seen.add(msg.get("id"))
+        if e.get("effort"):
+            efforts[e["effort"]] += 1
         fam = family(msg.get("model"), table)
         r = table.get(fam, {})
         parts = {"in": u.get("input_tokens", 0), "out": u.get("output_tokens", 0),
@@ -149,6 +159,7 @@ def hook():
     rec = {"v": 2, "type": "turn", "date": datetime.date.today().isoformat(),
            "session_id": payload.get("session_id"), "user": current_user(),
            "command": cmd, "items": items, "tokens": dict(tok),
+           "effort": efforts.most_common(1)[0][0] if efforts else None,
            "requests": requests, "cold_requests": cold, "ctx_max": ctx_max,
            "cost_by_model": {k: round(v, 4) for k, v in cost.items()},
            "cost_usd": round(sum(cost.values()), 4),
@@ -209,11 +220,13 @@ def report(by):
         agg = collections.defaultdict(lambda: [0, 0.0])
         for r in turns:
             for m, c in r.get("cost_by_model", {}).items():
-                agg[(r["command"], m)][0] += 1
-                agg[(r["command"], m)][1] += c
+                key = (r["command"], m, r.get("effort") or "-")
+                agg[key][0] += 1
+                agg[key][1] += c
         for k, (n, c) in sorted(agg.items(), key=lambda x: -x[1][1]):
-            print(f"{str(k):<40} turns={n:<6} est_usd={c:,.2f}")
+            print(f"{str(k):<48} turns={n:<6} est_usd={c:,.2f}")
         per_model_pass(turns, outcomes)
+        alerts(turns)
         return
     agg = collections.defaultdict(_acc)
     for r in turns:
@@ -237,6 +250,20 @@ def report(by):
         print(line)
     print("cache% = cache reads / all input; cold/req = requests that rebuilt the cache / requests "
           "(v2 lines only); ctx_max = largest single request")
+    alerts(turns)
+
+
+def alerts(turns):
+    limits = usage_cfg().get("alert_usd_per_day") or {}
+    if not limits:
+        return
+    day = collections.Counter()
+    for r in turns:
+        for m, c in r.get("cost_by_model", {}).items():
+            day[(r.get("date"), m)] += c
+    over = [(d, m, c) for (d, m), c in sorted(day.items()) if m in limits and c > limits[m]]
+    for d, m, c in over:
+        print(f"ALERT {d} {m}: est_usd={c:,.2f} > {limits[m]:,.2f} per day")
 
 
 def per_model_pass(turns, outcomes):

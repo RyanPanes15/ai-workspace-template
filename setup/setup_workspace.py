@@ -240,8 +240,59 @@ def load_profile(t):
     return json.loads(f.read_text(encoding="utf-8"))
 
 
+def normalize(cfg):
+    """Rewrite the old single `project` block as `projects: [...]` owning every repo."""
+    p = cfg.pop("project", None)
+    if p is None or "projects" in cfg:
+        return cfg
+    out = {k: p.pop(k) for k in ("source_language", "stakeholder_language") if k in p}
+    p["repos"] = [r["name"] for r in cfg.get("repos", [])]
+    out["projects"] = [p]
+    out.update(cfg)
+    return out
+
+
+def project_profiles(p):
+    return [load_profile(t) for t in p.get("types", [])]
+
+
 def active_profiles(cfg):
-    return [load_profile(t) for t in cfg.get("project", {}).get("types", [])]
+    """Distinct profiles across all projects, in type order."""
+    types = {t for p in cfg.get("projects", []) for t in p.get("types", [])}
+    return [load_profile(t) for t in TYPE_ORDER if t in types]
+
+
+def ctx_dir(p):
+    return f"context/projects/{p['name']}"
+
+
+def find_project(cfg, name):
+    names = [p["name"] for p in cfg.get("projects", [])]
+    if name not in names:
+        sys.exit(f"unknown project '{name}' (projects: {', '.join(names) or 'none'})")
+    return cfg["projects"][names.index(name)]
+
+
+def repo_projects(cfg, name):
+    """(projects the repo belongs to, projects that use it as a reference)."""
+    ps = cfg.get("projects", [])
+    return ([p["name"] for p in ps if name in p.get("repos", [])],
+            [p["name"] for p in ps if name in p.get("reference_repos", [])])
+
+
+def project_roles(cfg, p):
+    roles = {r["role"] for r in cfg.get("repos", []) if r["name"] in p.get("repos", [])}
+    if p.get("reference_repos"):
+        roles |= {"legacy-frontend", "legacy-backend", "legacy-database"}
+    return roles
+
+
+def validate_projects(cfg):
+    names = {r["name"] for r in cfg.get("repos", [])}
+    for p in cfg.get("projects", []):
+        unknown = [n for n in p.get("repos", []) + p.get("reference_repos", []) if n not in names]
+        if unknown:
+            sys.exit(f"project '{p['name']}' lists unknown repo(s): {', '.join(unknown)}")
 
 
 def parse_types(text):
@@ -257,20 +308,18 @@ def parse_types(text):
 
 
 def apply_type_defaults(cfg, explicit=()):
-    """Set modes from the active profiles and switch on their default modules (never off)."""
-    profs = active_profiles(cfg)
-    if not profs:
-        return
-    cfg.setdefault("project", {})["modes"] = list(dict.fromkeys(pr["mode"] for pr in profs))
+    """Set each project's modes from its profiles and switch on their default modules (never off)."""
+    for p in cfg.get("projects", []):
+        if p.get("types"):
+            p["modes"] = list(dict.fromkeys(pr["mode"] for pr in project_profiles(p)))
     m = cfg.setdefault("modules", {})
-    for pr in profs:
+    for pr in active_profiles(cfg):
         for k, v in pr.get("modules", {}).items():
             if k not in explicit:
                 m[k] = bool(m.get(k)) or v
 
 
-def skipped_roles(cfg):
-    profs = active_profiles(cfg)
+def skipped_roles(profs):
     skip = set()
     for pr in profs:
         skip |= set(pr.get("skip_roles", []))
@@ -282,29 +331,39 @@ def skipped_roles(cfg):
 
 
 def missing_required(cfg):
-    roles = {r["role"] for r in cfg.get("repos", [])}
     out = []
-    for pr in active_profiles(cfg):
-        for grp in pr.get("required_roles", []):
-            grp = grp if isinstance(grp, list) else [grp]
-            if not roles & set(grp):
-                out.append((pr["label"], " or ".join(ROLES[g][0] for g in grp)))
+    for p in cfg.get("projects", []):
+        roles = project_roles(cfg, p)
+        for pr in project_profiles(p):
+            for grp in pr.get("required_roles", []):
+                grp = grp if isinstance(grp, list) else [grp]
+                if not roles & set(grp):
+                    out.append((p["name"], pr["label"], " or ".join(ROLES[g][0] for g in grp)))
     return out
 
 
 def render_profile(cfg):
-    profs = active_profiles(cfg)
-    head = f"{PBEGIN} (generated from profiles/ by setup — change with --set-type) -->"
-    if not profs:
-        return "\n".join([head, "### Active project profile", "",
-                          "_No project type set. Run `python setup/setup_workspace.py --set-type <greenfield|maintenance|port|feature>`"
-                          " (see docs/project-types.md)._", PEND])
-    L = [head, "### Active project profile: " + " + ".join(pr["label"] for pr in profs), ""]
-    if len(profs) > 1:
-        L += ["Several types are active. Each work item runs under the mode of the workflow that handles it "
-              "(build / defect / port / change); when unsure which applies, ask.", ""]
-    for pr in profs:
-        L.append((PROFILES_DIR / pr["type"] / "AGENTS.profile.md").read_text(encoding="utf-8").strip())
+    projects = [p for p in cfg.get("projects", []) if p.get("types")]
+    head = f"{PBEGIN} (generated from profiles/ by setup — change with --set-type --project) -->"
+    if not projects:
+        return "\n".join([head, "### Active project profiles", "",
+                          "_No project type set. Run `python setup/setup_workspace.py --set-type <greenfield|maintenance|port|feature>"
+                          " --project <name>` (see docs/project-types.md)._", PEND])
+    L = [head, "### Active project profiles", "",
+         "A work item follows the profile of the project that owns the repo it is in (§1 Projects, and the "
+         "repo's `.claude/rules` file). `<project>` in a path means that project's name.", ""]
+    for p in projects:
+        L.append(f"- `{p['name']}`: " + " + ".join(pr["label"] for pr in project_profiles(p))
+                 + f" · modes {', '.join(p.get('modes', []))} · context `{ctx_dir(p)}/`")
+    if any(len(p["types"]) > 1 for p in projects):
+        L += ["", "A project with several types runs each work item under the mode of the workflow that handles it "
+              "(build / defect / port / change); when unsure which applies, ask."]
+    L.append("")
+    for pr in active_profiles(cfg):
+        users = [p["name"] for p in projects if pr["type"] in p["types"]]
+        text = (PROFILES_DIR / pr["type"] / "AGENTS.profile.md").read_text(encoding="utf-8").strip()
+        first, _, rest = text.partition("\n")
+        L += [first, "", "Applies to: " + ", ".join(f"`{u}`" for u in users) + ".", rest.rstrip()]
         L += ["", "**Source of truth, in order:** " + " → ".join(pr["truth_order"]) + ".",
               "**Primary commands:** " + ", ".join(f"`{c}`" for c in pr["primary_commands"]) + ".",
               "**Always open from `mistakes/`:** " + ", ".join(f"`{m}`" for m in pr.get("always_read_mistakes", [])) + ".", ""]
@@ -320,13 +379,15 @@ def apply_profile(cfg):
     else:
         text = text.replace("\n---\n\n## 3.", "\n" + block + "\n\n---\n\n## 3.", 1)
     write(AGENTS, text)
-    for pr in active_profiles(cfg):
-        for rel in pr.get("scaffold", []):
-            src = PROFILES_DIR / rel
-            dst = ROOT / Path(*Path(rel).parts[2:])  # drop "<type>/scaffold/"
-            if dst.exists():
-                continue
-            write(dst, src.read_text(encoding="utf-8"))
+    for p in cfg.get("projects", []):
+        for pr in project_profiles(p):
+            for rel in pr.get("scaffold", []):
+                src = PROFILES_DIR / rel
+                sub = Path(*Path(rel).parts[2:])  # drop "<type>/scaffold/"
+                dst = ROOT / ctx_dir(p) / Path(*sub.parts[1:]) if sub.parts[0] == "context" else ROOT / sub
+                if dst.exists():
+                    continue
+                write(dst, src.read_text(encoding="utf-8"))
 
 
 # ───────────────────────── interactive ─────────────────────────
@@ -385,25 +446,34 @@ def ask_repo(role, existing_names, note="", allow_create=False):
 
 def interactive(cfg):
     banner()
-    p = cfg.setdefault("project", {})
+    cfg = normalize(cfg)
+    projects = cfg.setdefault("projects", [])
     say("── Project ──")
-    p["name"] = ask("project name", p.get("name", ROOT.name), required=True)
+    if projects:
+        say("  existing projects: " + ", ".join(p["name"] for p in projects) + " (enter one to update it, or a new name)")
+    name = ask("project name", projects[0]["name"] if len(projects) == 1 else ROOT.name, required=True)
+    p = next((q for q in projects if q["name"] == name), None)
+    if p is None:
+        p = {"name": name}
+        projects.append(p)
     p["description"] = ask("one-line description", p.get("description", ""))
-    p["stakeholder_language"] = ask("language for stakeholder replies", p.get("stakeholder_language", "English"))
-    p["source_language"] = ask("language of tickets/reports (for translation)", p.get("source_language", "English"))
+    cfg["stakeholder_language"] = ask("language for stakeholder replies", cfg.get("stakeholder_language", "English"))
+    cfg["source_language"] = ask("language of tickets/reports (for translation)", cfg.get("source_language", "English"))
     say("\n  Project type (comma-separate if more than one — see docs/project-types.md):")
     for i, t in enumerate(TYPE_ORDER, 1):
         say(f"    {i}. {t:<12} {load_profile(t)['label']}")
     p["types"] = parse_types(ask("type(s)", ",".join(p.get("types", [])) or "maintenance", required=True))
     apply_type_defaults(cfg)
-    profs = active_profiles(cfg)
+    profs = project_profiles(p)
     allow_create = any(pr.get("allow_create_repos") for pr in profs)
     required = {g for pr in profs for grp in pr.get("required_roles", []) for g in (grp if isinstance(grp, list) else [grp])}
     recommended = {g for pr in profs for g in pr.get("recommended_roles", [])}
-    skip = skipped_roles(cfg)
+    skip = skipped_roles(profs)
 
+    used = {n for q in projects if q is not p for n in q.get("repos", []) + q.get("reference_repos", [])}
+    kept = [r for r in cfg.get("repos", []) if r["name"] not in p.get("repos", []) or r["name"] in used]
     repos = []
-    names = set()
+    names = {r["name"] for r in kept}
     tag = lambda role: "  [required for this project type]" if role in required else ("  [recommended]" if role in recommended else "")
     for role in PRIMARY:
         r = ask_repo(role, names, tag(role), allow_create)
@@ -426,7 +496,8 @@ def interactive(cfg):
             if r:
                 repos.append(r)
                 names.add(r["name"])
-    cfg["repos"] = repos
+    cfg["repos"] = kept + repos
+    p["repos"] = [r["name"] for r in repos]
 
     g = cfg.setdefault("git", {})
     say("\n── Git conventions ──")
@@ -509,19 +580,26 @@ def enrich(cfg):
 
 
 def render_map(cfg):
-    p = cfg.get("project", {})
+    projects = cfg.get("projects", [])
     repos = cfg.get("repos", [])
     g = cfg.get("git", {})
     L = [f"{BEGIN} (generated by setup/setup_workspace.py {datetime.date.today()} — edit workspace.config.json, then re-run with --render) -->",
          "## 1. Workspace map", "",
-         f"**Project:** {p.get('name', '?')} — {p.get('description', '')}".rstrip(" —"),
-         f"**Project type:** {', '.join(p.get('types', [])) or 'not set'} · "
-         f"**Work modes:** {', '.join(p.get('modes', []))} · **Tickets in:** {p.get('source_language', '?')} · "
-         f"**Stakeholder replies in:** {p.get('stakeholder_language', '?')}", "",
-         "| Repo | Role | Path | Modifiable? | Integration branch | Context |",
-         "| --- | --- | --- | --- | --- | --- |"]
+         "**Projects:**", "",
+         "| Project | Types | Work modes | Repos | Context dir |",
+         "| --- | --- | --- | --- | --- |"]
+    for p in projects:
+        members = [f"`{n}`" for n in p.get("repos", [])] + [f"`{n}` (reference)" for n in p.get("reference_repos", [])]
+        L.append(f"| `{p['name']}` — {p.get('description', '')} | {', '.join(p.get('types', [])) or 'not set'} | "
+                 f"{', '.join(p.get('modes', []))} | {', '.join(members) or '—'} | `{ctx_dir(p)}/` |")
+    L += ["", f"**Tickets in:** {cfg.get('source_language', '?')} · "
+          f"**Stakeholder replies in:** {cfg.get('stakeholder_language', '?')}", "",
+          "| Repo | Project | Role | Path | Modifiable? | Integration branch | Context |",
+          "| --- | --- | --- | --- | --- | --- | --- |"]
     for r in repos:
-        L.append(f"| `{r['name']}` | {ROLES.get(r['role'], ('?',))[0]} | `{r['path']}` | {r['policy']} — "
+        member, ref = repo_projects(cfg, r["name"])
+        owners = ", ".join(member + [f"{n} (reference)" for n in ref]) or "—"
+        L.append(f"| `{r['name']}` | {owners} | {ROLES.get(r['role'], ('?',))[0]} | `{r['path']}` | {r['policy']} — "
                  f"{POLICY_TEXT[r['policy']]} | {r.get('integration_branch', '—')} | `context/repos/{r['name']}.md` |")
     roles = {r["role"] for r in repos}
     L += ["", "**Ownership routing** — default repo for an item:"]
@@ -540,12 +618,18 @@ def render_map(cfg):
         L.append("- **Reference implementation:** the legacy repos are the de-facto spec in defect mode "
                  "(AGENTS.md §2). Read-only; re-derive, never copy; cite file:line + recommendation; "
                  "check the deployed build's date/version when source and observed behavior disagree.")
-    missing = [r for r in ROLES if r not in roles and r != "other"]
+    if any(p.get("reference_repos") for p in projects):
+        L.append("- **Project reference repos** (`(reference)` in Projects): the de-facto spec for that project's "
+                 "port work. Read them; don't edit them as part of that project's work, even when they are "
+                 "editable for their own project.")
+    have = {p["name"]: project_roles(cfg, p) for p in projects}
+    missing = [r for r in ROLES if r != "other" and ROLES[r][3] and any(r not in v for v in have.values())]
     if missing:
         L += ["", "**Not registered** (agents fall back as noted):"]
         for r in missing:
-            if ROLES[r][3]:
-                L.append(f"- {ROLES[r][0]}: {ROLES[r][3]}.")
+            lacking = [n for n, v in have.items() if r not in v]
+            scope = f" ({', '.join(lacking)})" if len(have) > 1 else ""
+            L.append(f"- {ROLES[r][0]}{scope}: {ROLES[r][3]}.")
     L += ["", "**Git naming:**", "",
           "| Item type | Branch | Commit header | PR title |", "| --- | --- | --- | --- |",
           f"| defect | `{g.get('fix_branch', 'fix/{area}/{item}')}` | `{g.get('commit', '{area}: ({item}) {summary}')}` | `{g.get('pr_title', '[{ITEM}] {summary}')}` |",
@@ -591,7 +675,7 @@ def render_context(r):
 RULE_BANNER = "<!-- generated by setup/setup_workspace.py from context/repos/{name}.md — edit that file, then --render -->"
 
 
-def render_rule(r):
+def render_rule(r, cfg):
     """Short path-scoped rule for one repo (.claude/rules/repo-<name>.md). Regenerated on every
     render. Only for repos inside the workspace: scoped globs are project-relative."""
     path = resolve(r["path"])
@@ -607,6 +691,12 @@ def render_rule(r):
          f"{', '.join(f'`{b}`' for b in r.get('protected_branches', [])) or '—'}.",
          f"- Full context (structure, ownership, defect patterns, quiet commands): `context/repos/{r['name']}.md` — "
          "read it before searching or running git here; this rule covers file access only."]
+    member, ref = repo_projects(cfg, r["name"])
+    for p in (find_project(cfg, n) for n in member):
+        L.append(f"- Project: `{p['name']}` ({', '.join(p.get('types', [])) or 'type not set'}) — follow its profile "
+                 f"(AGENTS.md §2); project context: `{ctx_dir(p)}/`.")
+    for n in ref:
+        L.append(f"- Reference for `{n}`: during `{n}` work, read it as the reference; don't edit it as part of that work.")
     if r["policy"] in ("read-only", "flag-only"):
         L.append("- **Never edit here and never run mutating git here** (enforced by `.claude/hooks/repo_guard.py`).")
     return "\n".join(L) + "\n"
@@ -661,7 +751,7 @@ def apply(cfg):
         else:
             write(f, render_context(r))
     for r in cfg["repos"]:
-        rule = render_rule(r)
+        rule = render_rule(r, cfg)
         if rule is not None:
             write(ROOT / ".claude" / "rules" / f"repo-{r['name']}.md", rule)
     if not DRY:
@@ -680,12 +770,12 @@ def apply(cfg):
     local = json.loads(lp.read_text(encoding="utf-8")) if lp.exists() else {}
     stop = local.setdefault("hooks", {}).setdefault("Stop", [])
     cmd = f'{py} "$CLAUDE_PROJECT_DIR/modules/usage-metrics/usage_tracker.py"'
-    has = any(cmd in json.dumps(h) for h in stop)
+    has = any(cmd in [x.get("command") for x in h.get("hooks", [])] for h in stop)
     if cfg.get("modules", {}).get("usage_metrics") and not has:
         stop.append({"hooks": [{"type": "command", "command": cmd, "timeout": 30}]})
         write(lp, json.dumps(local, indent=2) + "\n")
     elif not cfg.get("modules", {}).get("usage_metrics") and has:
-        local["hooks"]["Stop"] = [h for h in stop if cmd not in json.dumps(h)]
+        local["hooks"]["Stop"] = [h for h in stop if cmd not in [x.get("command") for x in h.get("hooks", [])]]
         write(lp, json.dumps(local, indent=2) + "\n")
 
 
@@ -718,18 +808,21 @@ def summary(cfg):
         roles.add(r["role"])
         state = "MISSING on disk" if r.get("_missing") else ("; ".join(r.get("_stack", [])[:2]) or "no stack detected")
         say(f"  ✓ {ROLES[r['role']][0]:<32} {r['name']:<18} {r['policy']:<10} {state}")
-    skip = skipped_roles(cfg)
-    for r in cfg["repos"]:
-        if r["role"] in skip:
-            say(f"  note: {r['name']} has role {r['role']}, which this project type does not use — kept, but no workflow reads it")
-    for role in ROLES:
-        if role not in roles and role != "other" and role not in skip:
-            flag = "!" if role in PRIMARY else "·"
-            say(f"  {flag} {ROLES[role][0]:<32} not provided — {ROLES[role][3]}")
-    for label, need in missing_required(cfg):
-        say(f"\n  WARNING: {label} needs a {need} repo — none registered.")
-    if not roles & set(PRIMARY) and "greenfield" not in cfg.get("project", {}).get("types", []):
-        say("\n  WARNING: neither a frontend nor a backend repo is registered.")
+    for p in cfg.get("projects", []):
+        say(f"\n  [{p['name']}] {', '.join(p.get('types', [])) or 'type not set'} → {ctx_dir(p)}/")
+        prole = project_roles(cfg, p)
+        skip = skipped_roles(project_profiles(p))
+        for r in cfg["repos"]:
+            if r["name"] in p.get("repos", []) and r["role"] in skip:
+                say(f"  note: {r['name']} has role {r['role']}, which this project type does not use — kept, but no workflow reads it")
+        for role in ROLES:
+            if role not in prole and role != "other" and role not in skip:
+                flag = "!" if role in PRIMARY else "·"
+                say(f"  {flag} {ROLES[role][0]:<32} not provided — {ROLES[role][3]}")
+        if not prole & set(PRIMARY) and "greenfield" not in p.get("types", []):
+            say("\n  WARNING: neither a frontend nor a backend repo is registered.")
+    for name, label, need in missing_required(cfg):
+        say(f"\n  WARNING: [{name}] {label} needs a {need} repo — none registered.")
     say("\nNext steps:")
     say("  1. Review AGENTS.md §1 and fill the <fill in> parts of context/repos/*.md")
     say("     (structure, ownership, common defect patterns).")
@@ -748,15 +841,18 @@ def summary(cfg):
         say("  ·  parity: fill docs/parity.md tables, then python modules/parity/parity_check.py")
     if cfg.get("modules", {}).get("pr_metrics"):
         say("  ·  pr-metrics: gh auth login, then python modules/pr-metrics/fetch_pr_history.py --since <date>")
-    types = cfg.get("project", {}).get("types", [])
-    nxt = {"greenfield": "fill context/architecture.md + conventions.md, then /scaffold-project, then /build <feature>",
-           "maintenance": "fill context/environment.md + test-records.md, fetch the tracker, then /analyze <item-id>",
-           "port": "fill context/port-conventions.md, build the area index, run port_status.py --discover, then /port-feature <area>",
-           "feature": "fill context/parity-baseline.md, write docs/specs/<feature>.md, then /analyze-change or /build"}
-    for i, t in enumerate(types, 5):
-        say(f"  {i}. [{t}] {nxt[t]}")
-    if not types:
-        say("  5. Set a project type: python setup/setup_workspace.py --set-type <type>")
+    nxt = {"greenfield": "fill {ctx}/architecture.md + conventions.md, then /scaffold-project, then /build <feature>",
+           "maintenance": "fill {ctx}/environment.md + test-records.md, fetch the tracker, then /analyze <item-id>",
+           "port": "fill {ctx}/port-conventions.md, build the area index, run port_status.py --discover --project {name}, then /port-feature <area>",
+           "feature": "fill {ctx}/parity-baseline.md, write docs/specs/<feature>.md, then /analyze-change or /build"}
+    i = 5
+    for p in cfg.get("projects", []):
+        for t in p.get("types", []):
+            say(f"  {i}. [{p['name']}: {t}] " + nxt[t].format(ctx=ctx_dir(p), name=p["name"]))
+            i += 1
+        if not p.get("types"):
+            say(f"  {i}. [{p['name']}] set a type: python setup/setup_workspace.py --set-type <type> --project {p['name']}")
+            i += 1
 
 
 # ───────────────────────── other commands ─────────────────────────
@@ -777,10 +873,11 @@ def check(cfg):
                 msg += " · WARNING: read-only repo has local changes"
         bad += not ok
         say(f"  {r['name']:<18} {r['policy']:<10} {r['path']:<40} {msg}")
-    say(f"  project type(s): {', '.join(cfg.get('project', {}).get('types', [])) or 'not set'}")
-    for label, need in missing_required(cfg):
+    for p in cfg.get("projects", []):
+        say(f"  project {p['name']}: {', '.join(p.get('types', [])) or 'type not set'}")
+    for name, label, need in missing_required(cfg):
         bad += 1
-        say(f"  MISSING ROLE: {label} needs a {need} repo")
+        say(f"  MISSING ROLE: [{name}] {label} needs a {need} repo")
     for f in ("db-config.json", "service-account.json"):
         say(f"  secrets/{f:<22} {'present' if (ROOT / 'secrets' / f).exists() else 'absent'}")
     sys.exit(1 if bad else 0)
@@ -809,12 +906,13 @@ def main():
     ap.add_argument("--render", action="store_true", help="re-render from workspace.config.json")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--set-type", help="comma list: greenfield,maintenance,port,feature")
+    ap.add_argument("--project", help="project that --set-type changes (needed when there are several)")
     ap.add_argument("--install-global", action="store_true")
     ap.add_argument("--yes", action="store_true", help="assume yes for clone prompts")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     DRY = a.dry_run
-    existing = json.loads(CONFIG.read_text(encoding="utf-8")) if CONFIG.exists() else {}
+    existing = normalize(json.loads(CONFIG.read_text(encoding="utf-8"))) if CONFIG.exists() else {}
     install_claude_dir()
     if a.install_global:
         return install_global()
@@ -823,7 +921,11 @@ def main():
     if a.set_type:
         if not existing:
             sys.exit("workspace.config.json not found — run setup first.")
-        existing.setdefault("project", {})["types"] = parse_types(a.set_type)
+        projects = existing.get("projects", [])
+        if not a.project and len(projects) != 1:
+            sys.exit("--set-type needs --project <name> (projects: " + ", ".join(p["name"] for p in projects) + ")")
+        p = find_project(existing, a.project) if a.project else projects[0]
+        p["types"] = parse_types(a.set_type)
         apply_type_defaults(existing)
         cfg = existing
         enrich(cfg)
@@ -832,20 +934,22 @@ def main():
         apply_extras(cfg)
         return summary(cfg)
     if a.config:
-        cfg = json.loads(Path(a.config).read_text(encoding="utf-8"))
+        cfg = normalize(json.loads(Path(a.config).read_text(encoding="utf-8")))
         for r in cfg.get("repos", []):
             r.setdefault("policy", ROLES.get(r.get("role"), ROLES["other"])[1])
             r.setdefault("path", f"repos/{r['name']}")
         cfg.setdefault("git", {}).setdefault("push_namespaces", ["fix", "change", "feature"])
-        if cfg.get("project", {}).get("types"):
-            cfg["project"]["types"] = parse_types(",".join(cfg["project"]["types"]))
-            apply_type_defaults(cfg, explicit=set(cfg.get("modules", {})))
+        for p in cfg.get("projects", []):
+            p["types"] = parse_types(",".join(p.get("types", [])))
+        apply_type_defaults(cfg, explicit=set(cfg.get("modules", {})))
     elif a.render:
         if not existing:
             sys.exit("workspace.config.json not found — run without --render first.")
         cfg = existing
+        apply_type_defaults(cfg, explicit=set(cfg.get("modules", {})))
     else:
         cfg = interactive(existing)
+    validate_projects(cfg)
     clone_missing(cfg, assume_yes=a.yes)
     enrich(cfg)
     apply(cfg)

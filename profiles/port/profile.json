@@ -4,8 +4,8 @@
   "mode": "port",
   "truth_order": [
     "Explicit developer instruction",
-    "Reference behavior — parity is the spec (unless context/spec-changes.json records a requested change)",
-    "context/port-conventions.md (how reference concepts map to the new stack)",
+    "Reference behavior — parity is the spec (unless context/projects/<project>/spec-changes.json records a requested change)",
+    "context/projects/<project>/port-conventions.md (how reference concepts map to the new stack)",
     "Target stack idiom — re-derive, never transliterate"
   ],
   "required_roles": [
