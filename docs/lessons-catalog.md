@@ -48,6 +48,8 @@ promote to AGENTS.md when a mode recurs.
 | L39 | One person appeared as several rows (email, nickname, first name) in every metric | Canonical name + aliases on day one | context/people.json |
 | L40 | A long run ended on a progress update with work still open | TASKS.md checklist re-read before ending a turn; nudge limit | AGENTS.md §5 |
 | L41 | Kept pushing a failing approach for several rounds | Two failures with the same approach → stop and re-plan | AGENTS.md §5 |
+| L42 | Agent asked a question already answered in context, or answered before but never written down | Surface the answer under a clear heading as a directive; write tribal answers down | maintain-context §2–4 |
+| L43 | Many exploratory tool calls to learn one fact the context could have stated | Add the fact (or a pointer) where the agent looks first; a negative directive when the waste is a command | maintain-context §2–4, context/repos |
 
 ## Instances
 

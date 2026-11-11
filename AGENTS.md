@@ -196,6 +196,19 @@ Full procedures: `workflows/analyze.md`, `workflows/fix.md`. The non-negotiables
   going; blocked → say what blocks each item. End the file with a short *Results*
   section. Check in on the plan only when it contains a decision that is the
   developer's; otherwise proceed.
+- **Name the skills in the checklist.** Every `TASKS.md` header carries a `Skills:` line
+  beside `Mistake log:`: the command that runs the task (`/build`, `/port-feature`,
+  `/area-loop`, `/analyze`, `/fix`) and the subagent per step (`test-runner` for gates,
+  `completeness-verifier` before a port-map `verified`, `fix-reviewer` before a fix's
+  push gate, `/code-review` on the unpushed diff).
+- **Common requests start the matching command, not ad-hoc work.** "Continue" / "next
+  task" → read the open `_work/runs/*/TASKS.md`, skip tasks another session owns, run the
+  command on its `Skills:` line (none → pick one below and add the line). Scoping new
+  work: unclear request → `/brief`; new feature → `/build` (spec first); port of a
+  reference area → `/port-feature`; change request → `/analyze-change`; defect / "fix X"
+  → `/analyze`, then `/fix`; costly-to-reverse decision → `/adr`. No command fits → say
+  so and proceed. Before running it, tell the developer in one line which command runs
+  and why (`Running /fix for <task> — Skills: line in TASKS.md`).
 - **A request with no clear command, repo scope or done-condition starts with
   `workflows/brief.md`** (≤3 questions, asked only after inferring from the workspace
   map and the trail).
